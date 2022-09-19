@@ -1,0 +1,412 @@
+#' Two Stage Curvature Identification with Boosting
+#' @description \code{tsci_boosting} implements Two Stage Curvature Identification
+#' (Guo and Buehlmann 2022) with boosting. Through a data-dependent way, it
+#' tests for the smallest sufficiently large violation space among a pre-specified
+#' sequence of nested violation space candidates. Point and uncertainty estimates
+#' of the treatment effect for all violation space candidates including the
+#' selected violation space will be returned amongst other relevant statistics.
+#'
+#' @param Y observations of the outcome variable. Either a numeric vector of length n
+#' or a numeric matrix with dimension n by 1.
+#' @param D observations of the treatment variable. Either a numeric vector of length n
+#' or a numeric matrix with dimension n by 1.
+#' @param Z observations of the instrumental variable(s). Either a numeric vector of length n
+#' or a numeric matrix with dimension n by s.
+#' @param X observations of baseline covariate(s) used to fit the treatment model. Either a numeric vector of length n
+#' or a numeric matrix with dimension n by p or \code{NULL}
+#' (if no covariates should be included).
+#' @param W (transformed) observations of baseline covariate(s) used to fit the outcome model. Either a numeric vector of length n
+#' or a numeric matrix with dimension n by p_w or \code{NULL}
+#' (if no covariates should be included).
+#' @param vio_space  list with numeric vectors of length n and/or numeric matrices with n rows as elements to
+#' specify the violation space candidates. See Details for more information.
+#' @param create_nested_sequence logical. If \code{TRUE}, the violation space candidates (in form of matrices)
+#' are defined sequentially starting with an empty violation matrix and subsequently
+#' adding the next element of \code{vio_space} to the current violation matrix.
+#' If \code{FALSE,} the violation space candidates (in form of matrices) are defined as the empty space and the elements of \code{vio_space}.
+#' See Details for more information.
+#' @param sel_method The selection method used to estimate the treatment effect. Either "comparison" or "conservative". See Details.
+#' @param split_prop proportion of observations used to fit the outcome model. Has to be a value in (0, 1).
+#' @param nrounds number of boosting iterations.
+#' Can either be a single integer value or a vector containing multiple integer values to try.
+#' @param eta learning rate of the boosting algorithm.
+#' Can either be a single numeric value or a vector containing multiple numeric values to try.
+#' @param max_depth maximal tree depth.
+#' Can either be a single integer value or a vector containing multiple integer values to try.
+#' @param subsample subsample ratio of the training instance.
+#' Can either be a single numeric value or a vector containing multiple numeric values to try.
+#' Has to be a value in (0, 1].
+#' @param colsample_bytree subsample ratio of columns when constructing each tree.
+#' Can either be a single numeric value or a vector containing multiple numeric values to try.
+#' Has to be a value in (0, 1].
+#' @param early_stopping logical. If \code{TRUE}, early stopping will be applied to
+#' choose the optimal number of boosting iteration using the cross-validation mean squared error.
+#' @param nfolds number of folds used for cross-validation to choose best parameter combination.
+#' @param iv_threshold minimal value of the threshold of IV strength test.
+#' @param threshold_boot logical. if \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
+#' If \code{FALSE}, it does not perform a bootstrap. See Details.
+#' @param alpha the significance level.
+#' @param nsplits number of times the data will be split. Has to be an integer larger or equal 1. See Details.
+#' @param mult_split_method method to calculate the standard errors, p-values and to construct the confidence intervals if multi-splitting is performed.
+#' Default is "DML" if \code{nsplits} == 1 and "FWER" otherwise. See Details.
+#' @param intercept logical. If \code{TRUE}, an intercept is included in the outcome model.
+#' @param parallel one out of \code{"no"}, \code{"multicore"}, or \code{"snow"} specifying the parallelization method used.
+#' @param ncores the number of cores to use.
+#' @param cl either a parallel or snow cluster or \code{NULL}.
+#' @param raw_output logical. If \code{TRUE}, the coefficient and standard error estimates of each split will be returned.
+#' This is only needed for the use of the function \code{confint} if \code{mult_split_method} equals "FWER". Default is
+#' \code{TRUE} if \code{mult_split_method} is \code{TRUE} and \code{FALSE} otherwise.
+#' @param B number of bootstrap samples.
+#' Bootstrap methods are used to calculate the IV strength threshold if \code{threshold_boot} is \code{TRUE} and for the violation space selection.
+#'
+#' @return
+#' A list containing the following elements:
+#' \describe{
+#'     \item{\code{Coef_all}}{a series of point estimates of the treatment effect
+#'     obtained by the different violation space candidates.}
+#'     \item{\code{sd_all}}{standard errors of the estimates of the treatmnet effect
+#'     obtained by the different violation space candidates.}
+#'     \item{\code{pval_all}}{p-values of the treatment effect estimates obtained by the
+#'     different violation space candidates.}
+#'     \item{\code{CI_all}}{confidence intervals for the treatment effect obtained by the
+#'     different violation space candidates.}
+#'     \item{\code{Coef_sel}}{the point estimator of the treatment effect obtained by
+#'     the selected violation space candidate(s).}
+#'     \item{\code{sd_sel}}{the standard error of Coef_sel.}
+#'     \item{\code{pval_sel}}{p-value of the treatment effect estimate obtained by the
+#'     selected violation space candidate(s).}
+#'     \item{\code{CI_sel}}{confidence interval for the treatment effect obtained by
+#'     the selected violation space candidate(s).}
+#'     \item{\code{iv_str}}{IV strength using the different violation space candidates.}
+#'     \item{\code{iv_thol}}{the threshold for the IV strength using the different violation space candidates.}
+#'     \item{\code{Qmax}}{the frequency each violation space candidate was the largest violation space candidate
+#'     for which the IV strength was considered large enough determined by the IV strength test over the multiple data splits.
+#'     If 0, the IV Strength test failed for the first violation space candidate.
+#'     Otherwise, violation space selection was performed.}
+#'     \item{\code{q_comp}}{the frequency each violation space candidate was selected by the comparison method over the multiple data splits.}
+#'     \item{\code{q_cons}}{the frequency each violation space candidate was selected by the conservative method over the multiple data splits.}
+#'     \item{\code{invalidity}}{the frequency the instrumental variable(s) were considered valid, invalid or too weak to test for violations.
+#'     The instrumental variables are considered too weak to test for violations if the IV strength is already too weak using the first
+#'     violation space candidate (besides the empty violation space). Testing for violations is always performed by using the comparison method.}
+#'     \item{\code{mse}}{the out-of-sample mean squared error of the fitted treatment model.}
+#'     \item{\code{FirstStage_model}}{the method used to fit the treatment model.}
+#'     \item{\code{n_A1}}{number of observations in A1.}
+#'     \item{\code{n_A2}}{number of observations in A2.}
+#'     \item{\code{nsplits}}{number of data splits performed.}
+#'     \item{\code{mult_split_method}}{the method used to calculate the standard errors and p-values.}
+#'     \item{\code{alpha}}{the significance level used.}
+#'}
+#'
+#' @details The treatment and outcome models are assumed to be of the following forms:
+#' \deqn{D_i = f(Z_i, X_i) + \delta_i}
+#' \deqn{Y_i = \beta \cdot D_i + h(Z_i, X_i) + \phi(X_i) + \epsilon_i}
+#' where \eqn{f(Z_i, X_i)} is estimated using L2 boosting with regression trees as base learners,
+#' \eqn{h(Z_i X_i)} is approximated using the violation space candidates and \eqn{\phi(X_i)} is approximated by
+#' a linear combination of the columns in \code{W}. The errors are allowed to be heteroscedastic.
+#' To avoid overfitting bias the data is randomly split into two subsets \eqn{A1} and \eqn{A2}
+#' where the proportion of observations in the two sets is specified by \code{split_prop}.
+#' \eqn{A2} is used to train the random forest and \eqn{A1} is used to perform violation space selection
+#' and to estimate the treatment effect. \cr \cr
+#' The package \code{xgboost} is used for boosting. If any of \code{nrounds},
+#' \code{eta}, \code{max_depth}, \code{subsample} or \code{colsample_bytree} has more than one value,
+#' the best parameter combination is chosen by minimizing the cross-validation mean squared error. \cr \cr
+#' The violation space candidates should be in a nested sequence as the violation space selection is performed
+#' by comparing the treatment estimate obtained by each violation space candidate with the estimates of all
+#' violation space candidates further down the list \code{vio_space} that provide enough IV strength. Only if no
+#' significant difference was found in all of those comparisons, the violation space
+#' candidate will be selected. If \code{sel_method} is 'comparison', the treatment effect estimate of this
+#' violation space candidate will be returned. If \code{sel_method} is 'conservative', the treatment effect estimate
+#' of the successive violation space candidate will be returned provided that the IV strength is large enough.
+#' The specification of suitable violation space candidates is a crucial step because a poor approximation
+#' of \eqn{g(Z_i, X_i)} might not address the bias caused by the violation of the IV assumption sufficiently well.
+#' The function \code{\link[TSCI]{create_monomials}} can be used to create a predefined sequence of
+#' violation space candidates consisting of monomials.
+#' The function \code{\link[TSCI]{create_interactions}} can be used to create a predefined sequence of
+#' violation space candidates consisting of two-way interactions between the instrumens themselves and between
+#' the instruments and the instruments and baseline covariates.  \cr \cr
+#' \code{W} should be chosen to be flexible enough to approximate the functional form of \eqn{\phi} well
+#' as otherwise the treatment estimator might be biased. \cr \cr
+#' The instrumental variable(s) are considered strong enough for violation space candidate \eqn{V_q} if the estimated IV strength using this
+#' violation space candidate is larger than the obtained value of the threshold of the IV strength.
+#' The formula of the threshold of the IV strength has the form
+#' \eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q) } if \code{threshold_boot} is \code{TRUE}, and
+#' \eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}} if \code{threshold_boot} is \code{FALSE}. The matrix
+#' \eqn{\mathrm{M} (V_q)} depends on the hat matrix obtained from estimating \eqn{f(Z_i, X_i)}, the violation space candidate \eqn{V_q} and
+#' the variables to include in the outcome model \code{W}. \eqn{S (V_q)} is obtained using a bootstrap and aims to adjust for the estimation error
+#' of the IV strength.
+#' Usually, the value of the threshold of the IV strength obtained using the bootstrap approach is larger.
+#' Thus, using \code{threshold_boot} equals \code{TRUE} leads to a more conservative IV strength test.
+#' For more information see subsection 3.3 in Guo and Buehlmann (2022).\cr \cr
+#' \code{nsplits} specifies the number of data splits that should be performed.
+#' For each data split the output statistics such as the point estimates of the
+#' treatment effect are calculated. Those statistics will then be aggregated
+#' over the different data splits. It is recommended to perform multiple data splits
+#' as data splitting introduces additional randomness. By aggregating the results
+#' of multiple data splits, the effects of this randomness can be decreased.
+#' If \code{nsplits} is larger than 1, point estimates are aggregated by medians.
+#' Standard errors, p-values and confidence intervals are obtained by the method
+#' specified by the parameter \code{mult_split_method}. 'DML' uses the approach by
+#' Chernozhukov et al. (2018). 'FWER' uses the approach by Meinshausen et al. (2009)
+#' and controls for the family-wise error rate. 'FWER' does not provide standard errors.
+#' For large sample sizes, a large values for \code{nsplits} can lead to a high
+#' running time as for each split a new hat matrix must be calculated. \cr \cr
+#' There are three possibilities to set the argument \code{parallel}, namely
+#' \code{"no"} for serial evaluation (default),
+#' \code{"multicore"} for parallel evaluation using forking,
+#' and \code{"snow"} for parallel evaluation using a parallel
+#' socket cluster. It is recommended to select \link[base]{RNGkind}
+#' (\code{"L'Ecuyer-CMRG"}) and to set a seed to ensure that the parallel
+#' computing of the package \code{TSCI} is reproducible.
+#' This ensures that each processor receives a different substream of the
+#' pseudo random number generator stream.
+#' Thus, the results reproducible if the arguments remain unchanged.
+#' There is an optional argument \code{cl} to specify a custom cluster
+#' if \code{parallel = "snow"}.
+#'
+#' @references
+#' \itemize{
+#' \item{Zijian Guo, and Peter Buehlmann. Two Stage Curvature Identification with
+#' Machine Learning: Causal Inference with Possibly Invalid Instrumental Variables.
+#' \emph{arXiv:2203.12808}, 2022}
+#' \item{Nicolai Meinshausen, Lukas Meier, and Peter Buehlmann. P-values for high-dimensional
+#' regression. \emph{Journal of the American Statistical Association},
+#' 104(488):1671-1681, 2009. 16, 18}
+#' \item{Victor Chernozhukov, Denis Chetverikov, Mert Demirer, Esther Duflo, Christian Hansen,
+#' Whitney Newey, and James Robins. Double/debiased machine learning for treatment
+#' and structural parameters: Double/debiased machine learning.
+#' \emph{The Econometrics Journal}, 21(1), 2018. 4, 16, 18}
+#' }
+#'
+#' @seealso
+#' \code{\link[TSCI]{tsci_forest}} for TSCI with random forest. \cr \cr
+#' \code{\link[TSCI]{tsci_poly}} for TSCI with polynomial basis expansion. \cr \cr
+#' \code{\link[TSCI]{tsci_secondstage}} for TSCI with user provided hat matrix. \cr \cr
+#'
+#' @export
+#'
+#' @examples
+#' ### a small example without baseline covariates
+#' if (require("MASS")) {
+#'   # sample size
+#'   n <- 150
+#'   # the IV strength
+#'   a <- 1
+#'   # the violation strength
+#'   tau <- 1
+#'   # true effect
+#'   beta <- 1
+#'   # treatment model
+#'   f <- function(x) {1 + a * (x + x^2)}
+#'   # outcome model
+#'   g <- function(x) {1 + tau * x}
+#'
+#'   # generate data
+#'   mu_error <- rep(0, 2)
+#'   Cov_error <- matrix(c(1, 0.5, 0.5, 1), 2, 2)
+#'   Error <- MASS::mvrnorm(n, mu_error, Cov_error)
+#'   # instrumental variable
+#'   Z <- rnorm(n)
+#'   # treatment variable
+#'   D <- f(Z) + Error[, 1]
+#'   # outcome variable
+#'   Y <- beta * D + g(Z) + Error[, 2]
+#'
+#'   # Two Stage L2 Boosting
+#'   # create violation space candidates
+#'   vio_space <- create_monomials(Z, 2, "monomials_main")
+#'   # perform two stage curvature identification
+#'   output_BO <- tsci_boosting(Y, D, Z, vio_space = vio_space, nsplits = 1,
+#'                              max_depth = 2, nrounds = 20)
+#'   summary(output_BO)
+#' }
+#'
+#' \donttest{
+#' ### a larger example with baseline covariates
+#' if (require("MASS") & require("fda")) {
+#'   # dimension
+#'   p <- 10
+#'   # sample size
+#'   n <- 1000
+#'   # interaction value
+#'   inter_val <- 1
+#'   # the IV strength
+#'   a <- 1
+#'   # violation strength
+#'   tau <- 1
+#'   f <- function(x) {a * (1 * sin(2 * pi * x) + 1.5 * cos(2 * pi * x))}
+#'   rho <- 0.5
+#'   Cov <- stats::toeplitz(rho^c(0 : p))
+#'   mu <- rep(0, p + 1)
+#'   # true effect
+#'   beta <- 1
+#'   alpha <- as.matrix(rep(-0.3, p))
+#'   gamma <- as.matrix(rep(0.2, p))
+#'   inter <- as.matrix(c(rep(inter_val, 5),rep(0, p - 5)))
+#'
+#'   # generate the data
+#'   mu_error <- rep(0,2)
+#'   Cov_error <- matrix(c(1, 0.5, 0.5,1), 2, 2)
+#'   Error <- MASS::mvrnorm(n, mu_error, Cov_error)
+#'   W_original <- MASS::mvrnorm(n, mu, Cov)
+#'   W <- pnorm(W_original)
+#'   # instrumental variable
+#'   Z <- W[, 1]
+#'   # baseline covariates
+#'   X <- W[, -1]
+#'   # generate the treatment variable D
+#'   D <- f(Z) + X %*% alpha + Z * X %*% inter + Error[, 1]
+#'   # generate the outcome variable Y
+#'   Y <- D * beta + tau * Z + X %*% gamma + Error[, 2]
+#'
+#'   # Two Stage L2 Boosting
+#'   # create violation space candidates
+#'   vio_space <- create_monomials(Z, 4, "monomials_main")
+#'   # specify suitable basis W for the baseline covariates (here we choose basis splines)
+#'   W <- do.call(cbind,
+#'                lapply(seq_len(p), FUN = function(i) {
+#'                   knots <- quantile(X[, i], seq(0, 1, length = 10))
+#'                   fda::eval.basis(X[, i], fda::create.bspline.basis(rangeval = range(knots),
+#'                                                           breaks = knots, norder = 4))
+#'                 }))
+#'   # perform two stage curvature identification
+#'   output_BO <- tsci_boosting(Y, D, Z, X, vio_space = vio_space)
+#'   summary(output_BO)
+#' }
+#' }
+tsci_boosting <- function(Y,
+                          D,
+                          Z,
+                          X = NULL,
+                          W = X,
+                          vio_space,
+                          create_nested_sequence = TRUE,
+                          sel_method = c("comparison", "conservative"),
+                          split_prop = 2 / 3,
+                          nrounds = 50,
+                          eta = 0.3,
+                          max_depth = c(1:6),
+                          subsample = 1,
+                          colsample_bytree = 1,
+                          early_stopping = TRUE,
+                          nfolds = 5,
+                          iv_threshold = 10,
+                          threshold_boot = TRUE,
+                          alpha = 0.05,
+                          intercept = TRUE,
+                          parallel = "no",
+                          nsplits = 10,
+                          mult_split_method = c("FWER", "DML"),
+                          ncores = 1,
+                          cl = NULL,
+                          raw_output = NULL,
+                          B = 300) {
+
+  # checks that input is in the correct format.
+  check_input(Y = Y,
+              D = D,
+              Z = Z,
+              X = X,
+              W = W,
+              vio_space = vio_space,
+              create_nested_sequence = create_nested_sequence,
+              intercept = intercept,
+              split_prop = split_prop,
+              nrounds = nrounds,
+              eta = eta,
+              max_depth = max_depth,
+              subsample = subsample,
+              colsample_bytree = colsample_bytree,
+              early_stopping = early_stopping,
+              nfolds = nfolds,
+              iv_threshold = iv_threshold,
+              threshold_boot = threshold_boot,
+              alpha = alpha,
+              parallel = parallel,
+              nsplits = nsplits,
+              ncores = ncores,
+              cl = cl,
+              raw_output = raw_output,
+              B = B,
+              tsci_method = "boosting")
+  # if data is split only once then the default aggregation method is "DML" as
+  # this gives the same results as not aggregating. Otherwise "FWER" is used
+  # because it controls for the family-wise error rate.
+  if (missing(mult_split_method)) {
+    mult_split_method <- ifelse(nsplits > 1, "FWER", "DML")
+  }
+  mult_split_method <- match.arg(mult_split_method)
+  sel_method <- match.arg(sel_method)
+  # if TRUE returns the estimate of the treatment effect and its standard error
+  # for each data split. Is needed for the confint method if mult_split_method is "FWER".
+  if (is.null(raw_output)) {
+    raw_output <- ifelse(mult_split_method == "FWER", TRUE, FALSE)
+  }
+
+  # stores variables as matrices as matrix multiplications will be performed later.
+  Y = as.matrix(Y); D = as.matrix(D); Z = as.matrix(Z)
+  if (!is.null(X)) X <- as.matrix(X)
+  if (!is.null(W)) W <- as.matrix(W)
+
+  n <- NROW(Y)
+  p <- NCOL(Z) + ifelse(is.null(X), 0, NCOL(X))
+
+  # initializes parallelization setup.
+  do_parallel <- parallelization_setup(parallel = parallel, ncpus = ncores, cl = cl)
+
+  # sets up grid search over the hyperparameter combinations.
+  params_grid <- expand.grid(
+    nrounds = nrounds,
+    eta = eta,
+    max_depth = max_depth,
+    subsample = subsample,
+    colsample_bytree = colsample_bytree,
+    early_stopping = early_stopping,
+    lambda = 0
+  )
+
+  # creates the dataframe used to fit the treatment model.
+  df_treatment <- data.frame(cbind(D, Z, X))
+  names(df_treatment) <- c("D", paste("B", seq_len(p), sep = ""))
+
+  # size of A1 and A2.
+  n_A1 <- round(split_prop * n)
+  n_A2 <- n - n_A1
+
+  # calls tsci_multisplit which splits the data n_splits time into A1 and A2.
+  # fits the treatment model with A2, calculates the hat matrix for A1
+  # and subsequently performs violation space selection and treatment effect estimation.
+  outputs <- tsci_multisplit(df_treatment = df_treatment,
+                             Y = Y,
+                             D = D,
+                             Z = Z,
+                             W = W,
+                             vio_space = vio_space,
+                             create_nested_sequence = create_nested_sequence,
+                             intercept = intercept,
+                             sel_method = sel_method,
+                             iv_threshold = iv_threshold,
+                             threshold_boot = threshold_boot,
+                             alpha = alpha,
+                             params_grid = params_grid,
+                             function_hatmatrix = get_l2boost_hatmatrix,
+                             split_prop = split_prop,
+                             parallel = parallel,
+                             do_parallel = do_parallel,
+                             nsplits = nsplits,
+                             ncores = ncores,
+                             mult_split_method = mult_split_method,
+                             cl = cl,
+                             raw_output = raw_output,
+                             B = B)
+
+  # returns output.
+  outputs <- append(outputs,
+                    list(FirstStage_model = "L2 Gradient Tree Boosting",
+                         n_A1 = n_A1,
+                         n_A2 = n_A2,
+                         nsplits = nsplits,
+                         mult_split_method = mult_split_method,
+                         alpha = alpha))
+  class(outputs) <- c("tsci", "list")
+  return(outputs)
+}
