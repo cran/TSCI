@@ -1,11 +1,23 @@
-citHeader("To cite TSML in publications use:")
-
-citEntry(
-  entry    = "Manual",
-  title    = "{dmlalg}: Double machine learning algorithms",
-  author   = c(person(given = "Corinne", family = "Emmenegger")),
-  year     = "2021",
-  url  = "https://CRAN.R-project.org/package=dmlalg",
-  note = "R-package available on CRAN",
-  textVersion = paste("Emmenegger, C. (2021). dmlalg: Duble machine learning algorithms. URL https://CRAN.R-project.org/package=dmlalg. R-package available on CRAN.")
+bibentry(
+  bibtype  = "Manual",
+  title    = "{TSCI}: Tools for Causal Inference with Possibly Invalid Instrumental Variables",
+  author   = c(
+    person(given="David",
+            family = "Carl",
+            role = c("aut", "cre")),
+    person(given = "Corinne",
+            family = "Emmenegger",
+            role = c("aut")),
+    person(given = "Wei",
+            family = "Yuan",
+            role = c("aut")),
+    person(given = "Mengchu",
+            family = "Zheng",
+            role = c("aut")),
+    person(given = "Zijian",
+            family = "Guo",
+            role = c("aut"))),
+  year     = "2023",
+  url  = "https://CRAN.R-project.org/package=TSCI",
+  note = "R-package available on CRAN"
 )

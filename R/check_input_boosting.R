@@ -8,6 +8,7 @@ check_input_boosting <- function(error_message,
                                  colsample_bytree,
                                  early_stopping,
                                  nfolds,
+                                 self_predict,
                                  ...) {
   # this function checks if the input that is specific for tsci_boosting
   # is in the correct format and the values are valid.
@@ -26,6 +27,8 @@ check_input_boosting <- function(error_message,
       error_message <- paste(error_message, "early_stopping is neither TRUE nor FALSE.", sep = "\n")
     if (!is.numeric(nfolds))
       error_message <- paste(error_message, "nfolds is not numeric.", sep = "\n")
+    if (!is.logical(self_predict))
+      error_message <- paste(error_message, "self_predict is neither TRUE nor FALSE", sep = "\n")
     error_message <- check_input_data_splitting(error_message = error_message,
                                                 check_values = check_values,
                                                 ...)

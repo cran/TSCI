@@ -8,18 +8,25 @@
 #'
 #' @param Y observations of the outcome variable. Either a numeric vector of length n
 #' or a numeric matrix with dimension n by 1.
+#' If outcome variable is binary use dummy encoding.
 #' @param D observations of the treatment variable. Either a numeric vector of length n
 #' or a numeric matrix with dimension n by 1.
-#' @param Z observations of the instrumental variable(s). Either a numeric vector of length n
-#' or a numeric matrix with dimension n by s.
-#' @param X observations of baseline covariate(s) used to fit the treatment model. Either a numeric vector of length n
-#' or a numeric matrix with dimension n by p or \code{NULL}
+#' If treatment variable is binary use dummy encoding.
+#' @param Z observations of the instrumental variable(s). Either a vector of length n
+#' or a matrix with dimension n by s.
+#' If observations are not numeric dummy encoding will be applied.
+#' @param X observations of baseline covariate(s). Either a vector of length n
+#' or a matrix with dimension n by p or \code{NULL}
 #' (if no covariates should be included).
-#' @param W (transformed) observations of baseline covariate(s) used to fit the outcome model. Either a numeric vector of length n
-#' or a numeric matrix with dimension n by p_w or \code{NULL}
+#' If observations are not numeric dummy encoding will be applied.
+#' @param W (transformed) observations of baseline covariate(s) used to fit the outcome model. Either a vector of length n
+#' or a matrix with dimension n by p_w or \code{NULL}
 #' (if no covariates should be included).
+#' If observations are not numeric dummy encoding will be applied.
 #' @param vio_space either \code{NULL} or a list with numeric vectors of length n and/or numeric matrices with n rows as elements to
 #' specify the violation space candidates.
+#' If observations are not numeric dummy encoding will be applied.
+#' See Details for more information.
 #' If \code{NULL}, then the violation space candidates are chosen to be a nested sequence
 #' of monomials with degree depending on the orders of the polynomials used to fit
 #' the treatment model.
@@ -29,30 +36,33 @@
 #' If \code{FALSE,} the violation space candidates (in form of matrices) are defined as the empty space and the elements of \code{vio_space}.
 #' See Details for more information.
 #' @param sel_method The selection method used to estimate the treatment effect. Either "comparison" or "conservative". See Details.
-#' @param min_order either a single numeric value or a numeric vector of length s specifying
+#' @param min_order either a single integer value or a vector of integer values of length s specifying
 #' the smallest order of polynomials to use in the selection of the treatment model. If a
-#' single numeric value, the polynomials of all instrumental variables use this value.
-#' @param max_order either a single numeric value or a numeric vector of length s specifying
+#' single integer value is provided, the polynomials of all instrumental variables use this value.
+#' @param max_order either a single integer value or a vector of integer values of length s specifying
 #' the largest order of polynomials to use in the selection of the treatment model. If a
-#' single numeric value, the polynomials of all instrumental variables use this value.
-#' @param exact_order either a single numeric value or a numeric vector of length s specifying
+#' single integer value is provided, the polynomials of all instrumental variables use this value.
+#' @param exact_order either a single integer value or a vector of integer values of length s specifying
 #' the exact order of polynomials to use in the treatment model. If a
-#' single numeric value, the polynomials of all instrumental variables use this value.
+#' single integer value is provided, the polynomials of all instrumental variables use this value.
 #' @param order_selection_method method used to select the best fitting order of polynomials
 #' for the treatment model. Must be either 'grid search' or 'backfitting'.
 #' 'grid search' can be very slow if the number of instruments is large.
 #' @param max_iter number of iterations used in the backfitting algorithm if \code{order_selection_method} is 'backfitting'.
+#' Has to be a positive integer value.
 #' @param conv_tol tolerance of convergence in the backfitting algorithm if \code{order_selection_method} is 'backfitting'.
 #' @param gcv logical. If \code{TRUE}, the generalized cross-validation mean squared error is used
 #' to determine the best fitting order of polynomials for the treatment model.
 #' If \code{FALSE}, k-fold cross-validation is used instead.
 #' @param nfolds number of folds used for the k-fold cross-validation if \code{gcv} is \code{FALSE}.
-#' @param iv_threshold minimal value of the threshold of IV strength test.
+#' Has to be a positive integer value.
+#' @param sd_boot logical. if \code{TRUE}, it determines the standard error using a bootstrap approach.
+#' @param iv_threshold a numeric value specifying the minimum of the threshold of IV strength test.
 #' @param threshold_boot logical. if \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
 #' If \code{FALSE}, it does not perform a bootstrap. See Details.
-#' @param alpha the significance level.
+#' @param alpha the significance level. Has to be a numeric value between 0 and 1.
 #' @param intercept logical. If \code{TRUE}, an intercept is included in the outcome model.
-#' @param B number of bootstrap samples.
+#' @param B number of bootstrap samples. Has to be a positive integer value.
 #' Bootstrap methods are used to calculate the iv strength threshold if \code{threshold_boot} is \code{TRUE} and for the violation space selection.
 #'
 #' @return
@@ -109,20 +119,24 @@
 #' The instrumental variable(s) are considered strong enough for violation space candidate \eqn{V_q} if the estimated IV strength using this
 #' violation space candidate is larger than the obtained value of the threshold of the IV strength.
 #' The formula of the threshold of the IV strength has the form
-#' \eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q) } if \code{threshold_boot} is \code{TRUE}, and
-#' \eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}} if \code{threshold_boot} is \code{FALSE}. The matrix
+#' \eqn{\min \{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q), 40 \}} if \code{threshold_boot} is \code{TRUE}, and
+#' \eqn{\min \{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}, 40 \}} if \code{threshold_boot} is \code{FALSE}. The matrix
 #' \eqn{\mathrm{M} (V_q)} depends on the hat matrix obtained from estimating \eqn{f(Z_i, X_i)}, the violation space candidate \eqn{V_q} and
 #' the variables to include in the outcome model \code{W}. \eqn{S (V_q)} is obtained using a bootstrap and aims to adjust for the estimation error
 #' of the IV strength.
 #' Usually, the value of the threshold of the IV strength obtained using the bootstrap approach is larger.
 #' Thus, using \code{threshold_boot} equals \code{TRUE} leads to a more conservative IV strength test.
 #' For more information see subsection 3.3 in Guo and Buehlmann (2022). \cr \cr
+#' See also Carl et al. (2023) for more details.
 #'
 #' @references
 #' \itemize{
 #' \item{Zijian Guo, and Peter Buehlmann. Two Stage Curvature Identification with
 #' Machine Learning: Causal Inference with Possibly Invalid Instrumental Variables.
 #' \emph{arXiv:2203.12808}, 2022}
+#' \item{David Carl, Corinne Emmenegger, Peter Buehlmann, and Zijian Guo. TSCI:
+#' two stage curvature identification for causal inference with invalid instruments.
+#' \emph{arXiv:2304.00513}, 2023}
 #' }
 #'
 #' @seealso
@@ -223,12 +237,25 @@ tsci_poly <- function(Y,
                       conv_tol = 10^-6,
                       gcv = FALSE,
                       nfolds = 5,
+                      sd_boot = TRUE,
                       iv_threshold = 10,
                       threshold_boot = TRUE,
                       alpha = 0.05,
                       intercept = TRUE,
                       B = 300) {
-
+  # encodes categorical variables to dummy variables.
+  ls_encoded <- dummy_encoding(Y = Y,
+                               D = D,
+                               Z = Z,
+                               X = X,
+                               W = W,
+                               vio_space = vio_space)
+  Y <- ls_encoded$Y
+  D <- ls_encoded$D
+  Z <- ls_encoded$Z
+  X <- ls_encoded$X
+  W <- ls_encoded$W
+  vio_space <- ls_encoded$vio_space
   # checks that input is in the correct format.
   check_input(Y = Y,
               D = D,
@@ -246,17 +273,13 @@ tsci_poly <- function(Y,
               gcv = gcv,
               nfolds = nfolds,
               iv_threshold = iv_threshold,
+              sd_boot = sd_boot,
               threshold_boot = threshold_boot,
               alpha = alpha,
               B = B,
               tsci_method = "poly")
   order_selection_method <- match.arg(order_selection_method)
   sel_method <- match.arg(sel_method)
-
-
-  Y = as.matrix(Y); D = as.matrix(D); Z = as.matrix(Z)
-  if (!is.null(X)) X <- as.matrix(X)
-  if (!is.null(W)) W <- as.matrix(W)
 
   n <- NROW(Y)
   p <- NCOL(Z) + ifelse(is.null(X), 0, NCOL(X))
@@ -280,7 +303,8 @@ tsci_poly <- function(Y,
     min_order <- c(min_order, rep(1, NCOL(X)))
   }
 
-  params_list <- lapply(seq_len(p), FUN = function(i) seq(min_order[i], max_order[i], by = 1))
+  params_list <- lapply(seq_len(p),
+                        FUN = function(i) seq(as.integer(min_order[i]), as.integer(max_order[i]), by = 1))
 
 
   # creates dataframe for the treatment model.
@@ -292,10 +316,10 @@ tsci_poly <- function(Y,
   poly_CV <- get_poly_parameters(df_treatment = df_treatment,
                                  params_list = params_list,
                                  order_selection_method = order_selection_method,
-                                 max_iter = max_iter,
+                                 max_iter = as.integer(max_iter),
                                  conv_tol = conv_tol,
                                  gcv = gcv,
-                                 nfolds = nfolds)
+                                 nfolds = as.integer(nfolds))
 
 
   if (is.null(vio_space)) {
@@ -325,13 +349,14 @@ tsci_poly <- function(Y,
                       list_vio_space = list_vio_space,
                       intercept = intercept,
                       sel_method = sel_method,
+                      sd_boot = sd_boot,
                       iv_threshold = iv_threshold,
                       threshold_boot = threshold_boot,
                       split_prop = 1,
                       alpha = alpha,
                       params_grid = poly_CV$params,
                       function_hatmatrix = get_poly_hatmatrix,
-                      B = B,
+                      B = as.integer(B),
                       mse = poly_CV$mse)
 
   # returns output.
@@ -341,7 +366,8 @@ tsci_poly <- function(Y,
                          n_A2 = 0,
                          nsplits = 0,
                          mult_split_method = "No sample splitting was performed",
-                         alpha = alpha))
+                         alpha = alpha,
+                         sel_method = sel_method))
   class(outputs) <- c("tsci", "list")
   return(outputs)
 }

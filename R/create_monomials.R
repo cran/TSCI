@@ -2,7 +2,7 @@
 #'
 #' @param Z observations of the instrumental variable(s). Either a numeric vector of length n
 #' or a numeric matrix with dimension n by s.
-#' @param degree The degree up to which monomials should be created. Either a single numeric value or a numeric value of length s.
+#' @param degree The degree up to which monomials should be created. Either a single positive integer or a vector of length s containing positive integers.
 #' @param type One out of \code{monomials_main} or \code{monomials_full}. \cr
 #' \code{monomials_main} creates the monomials for the polynomials of each instrumental variable up to degree \code{degree}. \cr
 #' \code{monomials_full} creates the monomials for the polynomials of a combination of all instrumental variables up to degree \code{degree}. \cr
@@ -44,6 +44,7 @@ create_monomials <- function(Z, degree, type = c("monomials_main", "monomials_fu
   Z <- as.matrix(Z)
   n <- NROW(Z)
   p <- NCOL(Z)
+  degree <- as.integer(degree)
   if(length(degree) == 1) degree <- rep(degree, p)
   monomials <- vector("list", length = max(degree) + 1)
   monomials[[1]] <- matrix(1, nrow = n)

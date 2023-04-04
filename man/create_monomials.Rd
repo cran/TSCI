@@ -10,7 +10,7 @@ create_monomials(Z, degree, type = c("monomials_main", "monomials_full"))
 \item{Z}{observations of the instrumental variable(s). Either a numeric vector of length n
 or a numeric matrix with dimension n by s.}
 
-\item{degree}{The degree up to which monomials should be created. Either a single numeric value or a numeric value of length s.}
+\item{degree}{The degree up to which monomials should be created. Either a single positive integer or a vector of length s containing positive integers.}
 
 \item{type}{One out of \code{monomials_main} or \code{monomials_full}. \cr
 \code{monomials_main} creates the monomials for the polynomials of each instrumental variable up to degree \code{degree}. \cr

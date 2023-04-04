@@ -12,14 +12,26 @@ check_output <- function(list_outputs, ind_start) {
   error_string <- NULL
   for (i in seq_len(n)) {
     if(!is.null(errors[[i]]) | !is.null(messages[[i]]) | !is.null(warnings[[i]])){
-      error_string <- paste(error_string, paste("split", i + ind_start - 1),
-                            "The following errors occurred:",
-                            errors[[i]],
-                            "The following warnings were raised:",
-                            warnings[[i]],
-                            "The following messages were raised:",
-                            messages[[i]],
-                            sep = "\n")
+      error_string <-paste(error_string,
+                           paste("split", i + ind_start - 1), sep = "\n")
+      if (!is.null(errors[[i]])) {
+        error_string <- paste(error_string,
+                              "The following errors occurred:",
+                              errors[[i]],
+                              sep = "\n")
+      }
+      if (!is.null(messages[[i]])) {
+        error_string <- paste(error_string,
+                              "The following messages were returned:",
+                              messages[[i]],
+                              sep = "\n")
+      }
+      if (!is.null(warnings[[i]])) {
+        error_string <- paste(error_string,
+                              "The following warnings were raised:",
+                              warnings[[i]],
+                              sep = "\n")
+      }
     }
   }
 

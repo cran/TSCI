@@ -21,6 +21,7 @@ tsci_poly(
   conv_tol = 10^-6,
   gcv = FALSE,
   nfolds = 5,
+  sd_boot = TRUE,
   iv_threshold = 10,
   threshold_boot = TRUE,
   alpha = 0.05,
@@ -30,24 +31,31 @@ tsci_poly(
 }
 \arguments{
 \item{Y}{observations of the outcome variable. Either a numeric vector of length n
-or a numeric matrix with dimension n by 1.}
+or a numeric matrix with dimension n by 1.
+If outcome variable is binary use dummy encoding.}
 
 \item{D}{observations of the treatment variable. Either a numeric vector of length n
-or a numeric matrix with dimension n by 1.}
+or a numeric matrix with dimension n by 1.
+If treatment variable is binary use dummy encoding.}
 
-\item{Z}{observations of the instrumental variable(s). Either a numeric vector of length n
-or a numeric matrix with dimension n by s.}
+\item{Z}{observations of the instrumental variable(s). Either a vector of length n
+or a matrix with dimension n by s.
+If observations are not numeric dummy encoding will be applied.}
 
-\item{X}{observations of baseline covariate(s) used to fit the treatment model. Either a numeric vector of length n
-or a numeric matrix with dimension n by p or \code{NULL}
-(if no covariates should be included).}
+\item{X}{observations of baseline covariate(s). Either a vector of length n
+or a matrix with dimension n by p or \code{NULL}
+(if no covariates should be included).
+If observations are not numeric dummy encoding will be applied.}
 
-\item{W}{(transformed) observations of baseline covariate(s) used to fit the outcome model. Either a numeric vector of length n
-or a numeric matrix with dimension n by p_w or \code{NULL}
-(if no covariates should be included).}
+\item{W}{(transformed) observations of baseline covariate(s) used to fit the outcome model. Either a vector of length n
+or a matrix with dimension n by p_w or \code{NULL}
+(if no covariates should be included).
+If observations are not numeric dummy encoding will be applied.}
 
 \item{vio_space}{either \code{NULL} or a list with numeric vectors of length n and/or numeric matrices with n rows as elements to
 specify the violation space candidates.
+If observations are not numeric dummy encoding will be applied.
+See Details for more information.
 If \code{NULL}, then the violation space candidates are chosen to be a nested sequence
 of monomials with degree depending on the orders of the polynomials used to fit
 the treatment model.}
@@ -60,23 +68,24 @@ See Details for more information.}
 
 \item{sel_method}{The selection method used to estimate the treatment effect. Either "comparison" or "conservative". See Details.}
 
-\item{min_order}{either a single numeric value or a numeric vector of length s specifying
+\item{min_order}{either a single integer value or a vector of integer values of length s specifying
 the smallest order of polynomials to use in the selection of the treatment model. If a
-single numeric value, the polynomials of all instrumental variables use this value.}
+single integer value is provided, the polynomials of all instrumental variables use this value.}
 
-\item{max_order}{either a single numeric value or a numeric vector of length s specifying
+\item{max_order}{either a single integer value or a vector of integer values of length s specifying
 the largest order of polynomials to use in the selection of the treatment model. If a
-single numeric value, the polynomials of all instrumental variables use this value.}
+single integer value is provided, the polynomials of all instrumental variables use this value.}
 
-\item{exact_order}{either a single numeric value or a numeric vector of length s specifying
+\item{exact_order}{either a single integer value or a vector of integer values of length s specifying
 the exact order of polynomials to use in the treatment model. If a
-single numeric value, the polynomials of all instrumental variables use this value.}
+single integer value is provided, the polynomials of all instrumental variables use this value.}
 
 \item{order_selection_method}{method used to select the best fitting order of polynomials
 for the treatment model. Must be either 'grid search' or 'backfitting'.
 'grid search' can be very slow if the number of instruments is large.}
 
-\item{max_iter}{number of iterations used in the backfitting algorithm if \code{order_selection_method} is 'backfitting'.}
+\item{max_iter}{number of iterations used in the backfitting algorithm if \code{order_selection_method} is 'backfitting'.
+Has to be a positive integer value.}
 
 \item{conv_tol}{tolerance of convergence in the backfitting algorithm if \code{order_selection_method} is 'backfitting'.}
 
@@ -84,18 +93,21 @@ for the treatment model. Must be either 'grid search' or 'backfitting'.
 to determine the best fitting order of polynomials for the treatment model.
 If \code{FALSE}, k-fold cross-validation is used instead.}
 
-\item{nfolds}{number of folds used for the k-fold cross-validation if \code{gcv} is \code{FALSE}.}
+\item{nfolds}{number of folds used for the k-fold cross-validation if \code{gcv} is \code{FALSE}.
+Has to be a positive integer value.}
 
-\item{iv_threshold}{minimal value of the threshold of IV strength test.}
+\item{sd_boot}{logical. if \code{TRUE}, it determines the standard error using a bootstrap approach.}
+
+\item{iv_threshold}{a numeric value specifying the minimum of the threshold of IV strength test.}
 
 \item{threshold_boot}{logical. if \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
 If \code{FALSE}, it does not perform a bootstrap. See Details.}
 
-\item{alpha}{the significance level.}
+\item{alpha}{the significance level. Has to be a numeric value between 0 and 1.}
 
 \item{intercept}{logical. If \code{TRUE}, an intercept is included in the outcome model.}
 
-\item{B}{number of bootstrap samples.
+\item{B}{number of bootstrap samples. Has to be a positive integer value.
 Bootstrap methods are used to calculate the iv strength threshold if \code{threshold_boot} is \code{TRUE} and for the violation space selection.}
 }
 \value{
@@ -161,14 +173,15 @@ for \code{W} and \code{vio_space}. \cr \cr
 The instrumental variable(s) are considered strong enough for violation space candidate \eqn{V_q} if the estimated IV strength using this
 violation space candidate is larger than the obtained value of the threshold of the IV strength.
 The formula of the threshold of the IV strength has the form
-\eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q) } if \code{threshold_boot} is \code{TRUE}, and
-\eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}} if \code{threshold_boot} is \code{FALSE}. The matrix
+\eqn{\min \{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q), 40 \}} if \code{threshold_boot} is \code{TRUE}, and
+\eqn{\min \{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}, 40 \}} if \code{threshold_boot} is \code{FALSE}. The matrix
 \eqn{\mathrm{M} (V_q)} depends on the hat matrix obtained from estimating \eqn{f(Z_i, X_i)}, the violation space candidate \eqn{V_q} and
 the variables to include in the outcome model \code{W}. \eqn{S (V_q)} is obtained using a bootstrap and aims to adjust for the estimation error
 of the IV strength.
 Usually, the value of the threshold of the IV strength obtained using the bootstrap approach is larger.
 Thus, using \code{threshold_boot} equals \code{TRUE} leads to a more conservative IV strength test.
 For more information see subsection 3.3 in Guo and Buehlmann (2022). \cr \cr
+See also Carl et al. (2023) for more details.
 }
 \examples{
 ### a small example without baseline covariates
@@ -251,6 +264,9 @@ if (require("MASS")) {
 \item{Zijian Guo, and Peter Buehlmann. Two Stage Curvature Identification with
 Machine Learning: Causal Inference with Possibly Invalid Instrumental Variables.
 \emph{arXiv:2203.12808}, 2022}
+\item{David Carl, Corinne Emmenegger, Peter Buehlmann, and Zijian Guo. TSCI:
+two stage curvature identification for causal inference with invalid instruments.
+\emph{arXiv:2304.00513}, 2023}
 }
 }
 \seealso{

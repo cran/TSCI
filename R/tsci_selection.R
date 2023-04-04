@@ -15,6 +15,8 @@
 #' @param intercept logic, to include an intercept in the outcome model or not.
 #' @param sel_method The selection method used to estimate the treatment effect.
 #' Either "comparison" or "conservative".
+#' @param sd_boot logical. if \code{TRUE}, it determines the standard error using a bootstrap approach.
+#' If \code{FALSE}, it does not perform a bootstrap.
 #' @param iv_threshold the minimal value of the threshold of IV strength test.
 #' @param threshold_boot logical. if \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
 #' If \code{FALSE}, it does not perform a bootstrap.
@@ -72,13 +74,14 @@ tsci_selection <- function(Y,
                            weight,
                            intercept,
                            sel_method,
+                           sd_boot,
                            iv_threshold,
                            threshold_boot,
                            alpha,
                            B) {
   # this function performs violation space selection and calculates the output statistics.
   # For better understanding what certain parts in the codes do (x) will refer to the
-  # corresponding equation in Guo and Bühlmann (2022)
+  # corresponding equation in Guo and Bühlmann (2022, https://doi.org/10.48550/arXiv.2203.12808)
 
   # adding a column to W ensures that W is always a matrix even if no covariates should
   # be included. This avoids case distinctions further down in the code.
@@ -133,6 +136,7 @@ tsci_selection <- function(Y,
                                          weight = weight,
                                          eps_hat = eps_hat[[index]],
                                          delta_hat = delta_hat,
+                                         sd_boot = sd_boot,
                                          iv_threshold = iv_threshold,
                                          threshold_boot = threshold_boot,
                                          B = B)
@@ -181,36 +185,59 @@ tsci_selection <- function(Y,
     ### Selection
     # defines comparison matrix (20).
     H <- beta_diff <- matrix(0, Qmax, Qmax)
-    # computes H matrix (20).
-    for (q1 in seq_len(Qmax) - 1) {
-      for (q2 in (q1 + 1):(Qmax)) {
-        H[q1 + 1, q2] <-
-          as.numeric(sum((weight %*% D_resid[[q1 + 1]])^2 * eps_Qmax^2) / (D_RSS[q1 + 1]^2) +
-                       sum((weight %*% D_resid[[q2 + 1]])^2 * eps_Qmax^2) / (D_RSS[q2 + 1]^2) -
-                       2 * sum(eps_Qmax^2 * (weight %*% D_resid[[q1 + 1]]) * (weight %*% D_resid[[q2 + 1]])) /
-                       (D_RSS[q1 + 1] * D_RSS[q2 + 1]))
+    if (!sd_boot) {
+      for (q1 in seq_len(Qmax) - 1) {
+        for (q2 in (q1 + 1):(Qmax)) {
+          H[q1 + 1, q2] <-
+            as.numeric(sum((weight %*% D_resid[[q1 + 1]])^2 * eps_Qmax^2) / (D_RSS[q1 + 1]^2) +
+                         sum((weight %*% D_resid[[q2 + 1]])^2 * eps_Qmax^2) / (D_RSS[q2 + 1]^2) -
+                         2 * sum(eps_Qmax^2 * (weight %*% D_resid[[q1 + 1]]) * (weight %*% D_resid[[q2 + 1]])) /
+                         (D_RSS[q1 + 1] * D_RSS[q2 + 1]))
+        }
+      }
+      # computes beta difference matrix, uses Qmax.
+      for (q in seq_len(Qmax) - 1) {
+        beta_diff[q + 1, (q + 1):(Qmax)] <- abs(Coef_Qmax[q + 1] - Coef_Qmax[(q + 2):(Qmax + 1)]) # use bias-corrected estimator
+      }
+      # bootstrap for the quantile of the differences (23).
+      eps_Qmax_cent <- as.vector(eps_Qmax - mean(eps_Qmax))
+      eps_rep_matrix <- weight %*% (eps_Qmax_cent * matrix(rnorm(n_A1 * B), ncol = B))
+      diff_mat <- matrix(0, Qmax, Qmax)
+      max_val <-
+        apply(eps_rep_matrix, 2,
+              FUN = function(eps_rep) {
+                for (q1 in seq_len(Qmax) - 1) {
+                  for (q2 in (q1 + 1):(Qmax)) {
+                    diff_mat[q1 + 1, q2] <- sum(D_resid[[q2 + 1]] * eps_rep) /
+                      (D_RSS[q2 + 1]) - sum(D_resid[[q1 + 1]] * eps_rep) / (D_RSS[q1 + 1])
+                  }
+                }
+                diff_mat <- abs(diff_mat) / sqrt(H)
+                max(diff_mat, na.rm = TRUE)
+              })
+    } else {
+      diff_mat_boo <- matrix(0, 0, B)
+      u_matrix <- matrix(rnorm(n_A1 * B), ncol = B)
+      eps_Qmax_cent <- as.vector(eps_Qmax - mean(eps_Qmax))
+      eps_Qmax_boo <- u_matrix * eps_Qmax_cent
+      for (q1 in seq_len(Qmax) - 1) {
+        for (q2 in (q1 + 1):(Qmax)) {
+          beta_q1_term1 <- t(D_resid[[q1 + 1]]) %*% weight %*% eps_Qmax_boo / D_RSS[q1 + 1]
+          beta_q2_term1 <- t(D_resid[[q2 + 1]]) %*% weight %*% eps_Qmax_boo / D_RSS[q2 + 1]
+          H[q1 + 1, q2] <- var(as.numeric(beta_q2_term1 - beta_q1_term1))
+          # test: try to merge the calculation of diff_mat
+          one_diff_boo <- abs(as.numeric(beta_q2_term1 - beta_q1_term1))
+          diff_mat_boo <- rbind(diff_mat_boo, one_diff_boo)
+        }
+      }
+      H_vec <- c(t(H))[c(t(H)) != 0]
+      diff_mat_boo <- diff_mat_boo / sqrt(H_vec)
+      max_val <- apply(diff_mat_boo, 2, max, na.rm=TRUE)
+      # computes beta difference matrix, uses Qmax.
+      for (q in seq_len(Qmax) - 1) {
+        beta_diff[q + 1, (q + 1):(Qmax)] <- abs(Coef_Qmax[q + 1] - Coef_Qmax[(q + 2):(Qmax + 1)]) # use bias-corrected estimator
       }
     }
-    # computes beta difference matrix, uses Qmax.
-    for (q in seq_len(Qmax) - 1) {
-      beta_diff[q + 1, (q + 1):(Qmax)] <- abs(Coef_Qmax[q + 1] - Coef_Qmax[(q + 2):(Qmax + 1)]) # use bias-corrected estimator
-    }
-    # bootstrap for the quantile of the differences (23).
-    eps_Qmax_cent <- as.vector(eps_Qmax - mean(eps_Qmax))
-    eps_rep_matrix <- weight %*% (eps_Qmax_cent * matrix(rnorm(n_A1 * B), ncol = B))
-    diff_mat <- matrix(0, Qmax, Qmax)
-    max_val <-
-      apply(eps_rep_matrix, 2,
-            FUN = function(eps_rep) {
-              for (q1 in seq_len(Qmax) - 1) {
-                for (q2 in (q1 + 1):(Qmax)) {
-                  diff_mat[q1 + 1, q2] <- sum(D_resid[[q2 + 1]] * eps_rep) /
-                    (D_RSS[q2 + 1]) - sum(D_resid[[q1 + 1]] * eps_rep) / (D_RSS[q1 + 1])
-                }
-              }
-              diff_mat <- abs(diff_mat) / sqrt(H)
-              max(diff_mat, na.rm = TRUE)
-            })
     # corresponds to (24).
     z_alpha <- 1.01 * quantile(max_val, 0.975)
     diff_thol <- z_alpha * sqrt(H)
@@ -248,7 +275,7 @@ tsci_selection <- function(Y,
           output$Coef_all + qnorm(1 - alpha / 2) * output$sd_all)
   output$pval_all[] <-
     sapply(seq_len(length(output$Coef_all)),
-      FUN = function(i) p_val(Coef = output$CI_all[i], SE = output$sd_all[i], beta_test = 0)
+      FUN = function(i) p_val(Coef = output$Coef_all[i], SE = output$sd_all[i], beta_test = 0)
     )
 
   # Even if the instrument is too weak, we still select the empty violation space.
@@ -277,7 +304,7 @@ tsci_selection <- function(Y,
   )
   output$pval_sel[] <-
     sapply(seq_len(length(output$Coef_sel)),
-      FUN = function(i) p_val(Coef = output$CI_sel[i], SE = output$sd_sel[i], beta_test = 0)
+      FUN = function(i) p_val(Coef = output$Coef_sel[i], SE = output$sd_sel[i], beta_test = 0)
     )
   output
 }

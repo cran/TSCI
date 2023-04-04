@@ -10,6 +10,8 @@
 #' candidates will be created.
 #' @param intercept logical, including the intercept or not in the outcome model, default by TRUE.
 #' @param sel_method The selection method used to estimate the treatment effect. Either "comparison" or "conservative".
+#' @param sd_boot logical. if \code{TRUE}, it determines the standard error using a bootstrap approach.
+#' If \code{FALSE}, it does not perform a bootstrap.
 #' @param iv_threshold minimal value of the threshold of IV strength test.
 #' @param threshold_boot logical. if \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
 #' If \code{FALSE}, it does not perform a bootstrap.
@@ -52,6 +54,7 @@ tsci_multisplit <- function(df_treatment,
                             create_nested_sequence,
                             intercept,
                             sel_method,
+                            sd_boot,
                             iv_threshold,
                             threshold_boot,
                             alpha,
@@ -106,6 +109,7 @@ tsci_multisplit <- function(df_treatment,
         list_vio_space = list_vio_space,
         intercept = intercept,
         sel_method = sel_method,
+        sd_boot = sd_boot,
         iv_threshold = iv_threshold,
         threshold_boot = threshold_boot,
         split_prop = split_prop,
@@ -123,7 +127,7 @@ tsci_multisplit <- function(df_treatment,
     } else if (parallel == "snow") {
       if (is.null(cl)) {
         cl <- parallel::makePSOCKcluster(rep("localhost", ncores))
-        parallel::clusterExport(cl, varlist = getNamespaceExports("TSML"))
+        parallel::clusterExport(cl, varlist = getNamespaceExports("TSCI"))
         if (RNGkind()[1L] == "L'Ecuyer-CMRG")
           parallel::clusterSetRNGStream(cl)
         list_outputs <- parallel::parLapply(cl, seq_len(nsplits), tsci_parallel)
@@ -151,7 +155,7 @@ tsci_multisplit <- function(df_treatment,
       } else if (parallel == "snow") {
         if (is.null(cl)) {
           cl <- parallel::makePSOCKcluster(rep("localhost", ncores))
-          parallel::clusterExport(cl, varlist = getNamespaceExports("TSML"))
+          parallel::clusterExport(cl, varlist = getNamespaceExports("TSCI"))
           if (RNGkind()[1L] == "L'Ecuyer-CMRG")
             parallel::clusterSetRNGStream(cl)
           list_outputs_new <- parallel::parLapply(cl, seq_len(nsplits_new), tsci_parallel)

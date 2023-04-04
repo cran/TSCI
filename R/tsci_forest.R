@@ -8,56 +8,65 @@
 #'
 #' @param Y observations of the outcome variable. Either a numeric vector of length n
 #' or a numeric matrix with dimension n by 1.
+#' If outcome variable is binary use dummy encoding.
 #' @param D observations of the treatment variable. Either a numeric vector of length n
 #' or a numeric matrix with dimension n by 1.
-#' @param Z observations of the instrumental variable(s). Either a numeric vector of length n
-#' or a numeric matrix with dimension n by s.
-#' @param X observations of baseline covariate(s). Either a numeric vector of length n
-#' or a numeric matrix with dimension n by p or \code{NULL}
+#' If treatment variable is binary use dummy encoding.
+#' @param Z observations of the instrumental variable(s). Either a vector of length n
+#' or a matrix with dimension n by s.
+#' If observations are not numeric dummy encoding will be applied.
+#' @param X observations of baseline covariate(s). Either a vector of length n
+#' or a matrix with dimension n by p or \code{NULL}
 #' (if no covariates should be included).
-#' @param W (transformed) observations of baseline covariate(s) used to fit the outcome model. Either a numeric vector of length n
-#' or a numeric matrix with dimension n by p_w or \code{NULL}
+#' If observations are not numeric dummy encoding will be applied.
+#' @param W (transformed) observations of baseline covariate(s) used to fit the outcome model. Either a vector of length n
+#' or a matrix with dimension n by p_w or \code{NULL}
 #' (if no covariates should be included).
-#' @param vio_space  list with numeric vectors of length n and/or numeric matrices with n rows as elements to
-#' specify the violation space candidates. See Details for more information.
+#' If observations are not numeric dummy encoding will be applied.
+#' @param vio_space  list with vectors of length n and/or matrices with n rows as elements to
+#' specify the violation space candidates.
+#' If observations are not numeric dummy encoding will be applied.
+#' See Details for more information.
 #' @param create_nested_sequence logical. If \code{TRUE}, the violation space candidates (in form of matrices)
 #' are defined sequentially starting with an empty violation matrix and subsequently
 #' adding the next element of \code{vio_space} to the current violation matrix.
 #' If \code{FALSE,} the violation space candidates (in form of matrices) are defined as the empty space and the elements of \code{vio_space}.
 #' See Details for more information.
-#' @param sel_method The selection method used to estimate the treatment effect. Either "comparison" or "conservative". See Details.
-#' @param split_prop proportion of observations used to fit the outcome model. Has to be a value in (0, 1).
+#' @param sel_method the selection method used to estimate the treatment effect. Either "comparison" or "conservative". See Details.
+#' @param split_prop proportion of observations used to fit the outcome model. Has to be a numeric value in (0, 1).
 #' @param num_trees number of trees in random forests.
-#' Can either be a single integer value or a vector containing multiple integer values to try.
+#' Can either be a single integer value or a vector of integer values to try.
 #' @param mtry number of covariates to possibly split at in each node of the tree of the random forest.
-#' Can either be a single numeric value or a vector containing multiple numeric values to try.
-#' Can also be a list of single argument function(s) returning an integer, given the number of independent variables.
+#' Can either be a single integer value or a vector of integer values to try.
+#' Can also be a list of single argument function(s) returning an integer value, given the number of independent variables.
 #' The values have to be positive integers not larger than the number of independent variables in the treatment model. Default
 #' is to try all integer values between one-third of the independent variables and two-thirds of the independent variables.
 #' @param max_depth maximal tree depth in random forests.
-#' Can either be a single integer value or a vector containing multiple integer values to try.
+#' Can either be a single integer value or a vector of integer values to try.
 #' 0 correspond to unlimited depth.
 #' @param min_node_size minimal size of each leaf node in the random forest.
-#' Can either be a single integer value or a vector containing multiple integer values to try.
-#' @param self_predict logical, if \code{FALSE}, it sets the diagonal of the hat matrix
+#' Can either be a single integer value or a vector of integer values to try.
+#' @param self_predict logical. If \code{FALSE}, it sets the diagonal of the hat matrix
 #' of each tree to zero to avoid self-prediction and rescales the off-diagonal elements accordingly.
-#' @param iv_threshold minimal value of the threshold of IV strength test.
-#' @param threshold_boot logical. if \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
+#' @param sd_boot logical. if \code{TRUE}, it determines the standard error using a bootstrap approach.
+#' @param iv_threshold a numeric value specifying the minimum of the threshold of IV strength test.
+#' @param threshold_boot logical. If \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
 #' If \code{FALSE}, it does not perform a bootstrap. See Details.
-#' @param alpha the significance level.
+#' @param alpha the significance level. Has to be a numeric value between 0 and 1.
 #' @param nsplits number of times the data will be split. Has to be an integer larger or equal 1. See Details.
 #' @param mult_split_method method to calculate the standard errors, p-values and to construct the confidence intervals if multi-splitting is performed.
 #' Default is "DML" if \code{nsplits} == 1 and "FWER" otherwise. See Details.
 #' @param intercept logical. If \code{TRUE}, an intercept is included in the outcome model.
 #' @param parallel one out of \code{"no"}, \code{"multicore"}, or \code{"snow"}
 #' specifying the parallelization method used. See Details.
-#' @param ncores the number of cores to use.
+#' @param ncores the number of cores to use. Has to be an integer value larger or equal 1.
 #' @param cl either a parallel or snow cluster or \code{NULL}.
 #' @param raw_output logical. If \code{TRUE}, the coefficient and standard error estimates of each split will be returned.
 #' This is only needed for the use of the function \code{confint} if \code{mult_split_method} equals "FWER". Default is
 #' \code{TRUE} if \code{mult_split_method} is \code{TRUE} and \code{FALSE} otherwise.
-#' @param B number of bootstrap samples.
+#' @param B number of bootstrap samples. Has to be a positive integer value.
 #' Bootstrap methods are used to calculate the IV strength threshold if \code{threshold_boot} is \code{TRUE} and for the violation space selection.
+#' It is also used to calculate the standard error if \code{sd_boot} is \code{TRUE}.
 #'
 #' @return
 #' A list containing the following elements:
@@ -127,8 +136,8 @@
 #' The instrumental variable(s) are considered strong enough for violation space candidate \eqn{V_q} if the estimated IV strength using this
 #' violation space candidate is larger than the obtained value of the threshold of the IV strength.
 #' The formula of the threshold of the IV strength has the form
-#' \eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q) } if \code{threshold_boot} is \code{TRUE}, and
-#' \eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}} if \code{threshold_boot} is \code{FALSE}. The matrix
+#' \eqn{\min \{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q), 40 \}} if \code{threshold_boot} is \code{TRUE}, and
+#' \eqn{\min \{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}, 40 \}} if \code{threshold_boot} is \code{FALSE}. The matrix
 #' \eqn{\mathrm{M} (V_q)} depends on the hat matrix obtained from estimating \eqn{f(Z_i, X_i)}, the violation space candidate \eqn{V_q} and
 #' the variables to include in the outcome model \code{W}. \eqn{S (V_q)} is obtained using a bootstrap and aims to adjust for the estimation error
 #' of the IV strength.
@@ -159,7 +168,8 @@
 #' pseudo random number generator stream.
 #' Thus, the results reproducible if the arguments remain unchanged.
 #' There is an optional argument \code{cl} to specify a custom cluster
-#' if \code{parallel = "snow"}.
+#' if \code{parallel = "snow"}. \cr \cr
+#' See also Carl et al. (2023) for more details.
 #'
 #' @seealso
 #' \code{\link[TSCI]{tsci_boosting}} for TSCI with boosting. \cr \cr
@@ -178,6 +188,9 @@
 #' Whitney Newey, and James Robins. Double/debiased machine learning for treatment
 #' and structural parameters: Double/debiased machine learning.
 #' \emph{The Econometrics Journal}, 21(1), 2018. 4, 16, 18}
+#' \item{David Carl, Corinne Emmenegger, Peter Buehlmann, and Zijian Guo. TSCI:
+#' two stage curvature identification for causal inference with invalid instruments.
+#' \emph{arXiv:2304.00513}, 2023}
 #' }
 #'
 #' @export
@@ -283,18 +296,32 @@ tsci_forest <- function(Y,
                         mtry = NULL,
                         max_depth = 0,
                         min_node_size = c(5, 10, 20),
-                        self_predict = TRUE,
+                        self_predict = FALSE,
+                        sd_boot = TRUE,
                         iv_threshold = 10,
                         threshold_boot = TRUE,
                         alpha = 0.05,
                         nsplits = 10,
                         mult_split_method = c("FWER", "DML"),
                         intercept = TRUE,
-                        parallel = "no",
+                        parallel = c("no", "multicore", "snow"),
                         ncores = 1,
                         cl = NULL,
                         raw_output = NULL,
                         B = 300) {
+  # encodes categorical variables to dummy variables.
+  ls_encoded <- dummy_encoding(Y = Y,
+                               D = D,
+                               Z = Z,
+                               X = X,
+                               W = W,
+                               vio_space = vio_space)
+  Y <- ls_encoded$Y
+  D <- ls_encoded$D
+  Z <- ls_encoded$Z
+  X <- ls_encoded$X
+  W <- ls_encoded$W
+  vio_space <- ls_encoded$vio_space
   # checks that input is in the correct format.
   check_input(Y = Y,
               D = D,
@@ -310,10 +337,10 @@ tsci_forest <- function(Y,
               max_depth = max_depth,
               min_node_size = min_node_size,
               self_predict = self_predict,
+              sd_boot = sd_boot,
               iv_threshold = iv_threshold,
               threshold_boot = threshold_boot,
               alpha = alpha,
-              parallel = parallel,
               nsplits = nsplits,
               ncores = ncores,
               cl = cl,
@@ -328,16 +355,12 @@ tsci_forest <- function(Y,
   }
   mult_split_method <- match.arg(mult_split_method)
   sel_method <- match.arg(sel_method)
+  parallel <- match.arg(parallel)
   # if TRUE returns the estimate of the treatment effect and its standard error
   # for each data split. Is needed for the confint method if mult_split_method is "FWER".
   if (is.null(raw_output)) {
     raw_output <- ifelse(mult_split_method == "FWER", TRUE, FALSE)
   }
-
-  # stores variables as matrices as matrix multiplications will be performed later.
-  Y = as.matrix(Y); D = as.matrix(D); Z = as.matrix(Z)
-  if (!is.null(X)) X <- as.matrix(X)
-  if (!is.null(W)) W <- as.matrix(W)
 
   n <- NROW(Y)
   p <- NCOL(Z) + ifelse(is.null(X), 0, NCOL(X))
@@ -351,10 +374,10 @@ tsci_forest <- function(Y,
 
   # sets up grid search over the hyperparameter combinations.
   params_grid <- expand.grid(
-    num_trees = num_trees,
-    mtry = mtry,
-    max_depth = max_depth,
-    min_node_size = min_node_size,
+    num_trees = as.integer(num_trees),
+    mtry = as.integer(mtry),
+    max_depth = as.integer(max_depth),
+    min_node_size = as.integer(min_node_size),
     self_predict = self_predict
   )
 
@@ -379,6 +402,7 @@ tsci_forest <- function(Y,
                              create_nested_sequence = create_nested_sequence,
                              intercept = intercept,
                              sel_method = sel_method,
+                             sd_boot = sd_boot,
                              iv_threshold = iv_threshold,
                              threshold_boot = threshold_boot,
                              alpha = alpha,
@@ -387,12 +411,12 @@ tsci_forest <- function(Y,
                              split_prop = split_prop,
                              parallel = parallel,
                              do_parallel = do_parallel,
-                             nsplits = nsplits,
-                             ncores = ncores,
+                             nsplits = as.integer(nsplits),
+                             ncores = as.integer(ncores),
                              mult_split_method = mult_split_method,
                              cl = cl,
                              raw_output = raw_output,
-                             B = B)
+                             B = as.integer(B))
 
   # returns output
   outputs <- append(outputs,
@@ -401,7 +425,8 @@ tsci_forest <- function(Y,
                          n_A2 = n_A2,
                          nsplits = nsplits,
                          mult_split_method = mult_split_method,
-                         alpha = alpha))
+                         alpha = alpha,
+                         sel_method = sel_method))
   class(outputs) <- c("tsci", "list")
   return(outputs)
 }

@@ -66,10 +66,22 @@ get_l2boost_hatmatrix <- function(df_treatment_A1,
   for (iter in seq_len(params_A2$nrounds)) {
     leaves_iter_A1 <- nodes_A1[, iter]
     # calculates the hat matrix of the tree.
-    tree_hatmatrix <- get_tree_hatmatrix(leaves_iter_A1)
+    tree_hatmatrix <- get_tree_hatmatrix(leaves_iter_A1,
+                                         self_predict = params_A2$self_predict)
     # updates the hat matrix of the boosting fit. See Algorithm 3 in Guo and Bühlmann (2022).
     l2boost_hatmatrix <- l2boost_hatmatrix + params_A2$eta *
       mat.mult(tree_hatmatrix, diag(n_A1) - l2boost_hatmatrix)
+  }
+  # sets the diagonal of the hat matrix to zero and rescales the weights.
+  if (!params_A2$self_predict) {
+    row_sums_before <- rowSums(l2boost_hatmatrix)
+    # if the sums of the weights is non-positive after setting the diagonal to zero then we use the original weights.
+    ind <- row_sums_before - diag(l2boost_hatmatrix) > 0
+    diag(l2boost_hatmatrix)[ind] <- 0
+    row_sums_after <- rowSums(l2boost_hatmatrix)
+
+    # rescales the weights such that the rows sum up to the same value as before setting the diagonal to zero.
+    l2boost_hatmatrix <- l2boost_hatmatrix / row_sums_after * row_sums_before
   }
   return(list(
     weight = l2boost_hatmatrix,

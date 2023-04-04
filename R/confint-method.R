@@ -59,7 +59,7 @@ confint.tsci <- function(object, parm = NULL, level = 0.95, ...) {
     upper <- c(object$Coef_sel, object$Coef_all)[ind] + qnorm(1 - alpha / 2) * c(object$sd_sel, object$sd_all)[ind]
     conf_intervals <- cbind(lower, upper)
   }
-  colnames(conf_intervals) <- c(paste(100 * alpha/2, "%"), paste(100*(1 - alpha/2), "%"))
+  colnames(conf_intervals) <- c(paste0(100 * alpha/2, "%"), paste0(100*(1 - alpha/2), "%"))
   rownames(conf_intervals) <- names(c(object$Coef_sel, object$Coef_all)[ind])
 
   return(conf_intervals)

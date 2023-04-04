@@ -14,6 +14,7 @@ tsci_secondstage(
   weight,
   A1_ind = NULL,
   sel_method = c("comparison", "conservative"),
+  sd_boot = TRUE,
   iv_threshold = 10,
   threshold_boot = TRUE,
   alpha = 0.05,
@@ -23,20 +24,26 @@ tsci_secondstage(
 }
 \arguments{
 \item{Y}{observations of the outcome variable. Either a numeric vector of length n
-or a numeric matrix with dimension n by 1.}
+or a numeric matrix with dimension n by 1.
+If outcome variable is binary use dummy encoding.}
 
 \item{D}{observations of the treatment variable. Either a numeric vector of length n
-or a numeric matrix with dimension n by 1.}
+or a numeric matrix with dimension n by 1.
+If treatment variable is binary use dummy encoding.}
 
-\item{Z}{observations of the instrumental variable(s). Either a numeric vector of length n
-or a numeric matrix with dimension n by s.}
+\item{Z}{observations of the instrumental variable(s). Either a vector of length n
+or a matrix with dimension n by s.
+If observations are not numeric dummy encoding will be applied.}
 
-\item{W}{(transformed) observations of baseline covariate(s) used to fit the outcome model. Either a numeric vector of length n
-or a numeric matrix with dimension n by p_w or \code{NULL}
-(if no covariates should be included).}
+\item{W}{(transformed) observations of baseline covariate(s) used to fit the outcome model. Either a vector of length n
+or a matrix with dimension n by p_w or \code{NULL}
+(if no covariates should be included).
+If observations are not numeric dummy encoding will be applied.}
 
-\item{vio_space}{list with numeric vectors of length n and/or numeric matrices with n rows as elements to
-specify the violation space candidates. See Details for more information.}
+\item{vio_space}{list with vectors of length n and/or matrices with n rows as elements to
+specify the violation space candidates.
+If observations are not numeric dummy encoding will be applied.
+See Details for more information.}
 
 \item{create_nested_sequence}{logical. If \code{TRUE}, the violation space candidates (in form of matrices)
 are defined sequentially starting with an empty violation matrix and subsequently
@@ -52,16 +59,18 @@ If \code{NULL}, all observations will be used.}
 
 \item{sel_method}{The selection method used to estimate the treatment effect. Either "comparison" or "conservative". See Details.}
 
-\item{iv_threshold}{minimal value of the threshold of IV strength test.}
+\item{sd_boot}{logical. if \code{TRUE}, it determines the standard error using a bootstrap approach.}
+
+\item{iv_threshold}{a numeric value specifying the minimum of the threshold of IV strength test.}
 
 \item{threshold_boot}{logical. if \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
 If \code{FALSE}, it does not perform a bootstrap. See Details.}
 
-\item{alpha}{the significance level.}
+\item{alpha}{the significance level. Has to be a numeric value between 0 and 1.}
 
 \item{intercept}{logical. If \code{TRUE}, an intercept is included in the outcome model.}
 
-\item{B}{number of bootstrap samples.
+\item{B}{number of bootstrap samples. Has to be a positive integer value.
 Bootstrap methods are used to calculate the iv strength threshold if \code{threshold_boot} is \code{TRUE} and for the violation space selection.}
 }
 \value{
@@ -129,14 +138,15 @@ the instruments and the instruments and baseline covariates.  \cr \cr
 The instrumental variable(s) are considered strong enough for violation space candidate \eqn{V_q} if the estimated IV strength using this
 violation space candidate is larger than the obtained value of the threshold of the IV strength.
 The formula of the threshold of the IV strength has the form
-\eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q) } if \code{threshold_boot} is \code{TRUE}, and
-\eqn{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}} if \code{threshold_boot} is \code{FALSE}. The matrix
+\eqn{\min \{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \} + S (V_q), 40 \}} if \code{threshold_boot} is \code{TRUE}, and
+\eqn{\min \{\max \{ 2 \cdot \mathrm{Trace} [ \mathrm{M} (V_q) ], \mathrm{iv{\_}threshold} \}, 40 \}} if \code{threshold_boot} is \code{FALSE}. The matrix
 \eqn{\mathrm{M} (V_q)} depends on the hat matrix obtained from estimating \eqn{f(Z_i, X_i)}, the violation space candidate \eqn{V_q} and
 the variables to include in the outcome model \code{W}. \eqn{S (V_q)} is obtained using a bootstrap and aims to adjust for the estimation error
 of the IV strength.
 Usually, the value of the threshold of the IV strength obtained using the bootstrap approach is larger.
 Thus, using \code{threshold_boot} equals \code{TRUE} leads to a more conservative IV strength test.
 For more information see subsection 3.3 in Guo and Buehlmann (2022).\cr \cr
+See also Carl et al. (2023) for more details.
 }
 \examples{
 ### a small example without baseline covariates
@@ -237,6 +247,9 @@ regression. \emph{Journal of the American Statistical Association},
 Whitney Newey, and James Robins. Double/debiased machine learning for treatment
 and structural parameters: Double/debiased machine learning.
 \emph{The Econometrics Journal}, 21(1), 2018. 4, 16, 18}
+\item{David Carl, Corinne Emmenegger, Peter Buehlmann, and Zijian Guo. TSCI:
+two stage curvature identification for causal inference with invalid instruments.
+\emph{arXiv:2304.00513}, 2023}
 }
 }
 \seealso{

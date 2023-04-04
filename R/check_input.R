@@ -7,6 +7,7 @@ check_input <- function(Y,
                         vio_space,
                         create_nested_sequence,
                         intercept,
+                        sd_boot,
                         iv_threshold,
                         threshold_boot,
                         alpha,
@@ -53,6 +54,8 @@ check_input <- function(Y,
     error_message <- paste(error_message, "iv_threshold is not numeric.", sep = "\n")
   if (!is.logical(threshold_boot))
     error_message <- paste(error_message, "threshold_boot is neither TRUE nor FALSE.", sep = "\n")
+  if (!is.logical(sd_boot))
+    error_message <- paste(error_message, "sd_boot is neither TRUE nor FALSE.", sep = "\n")
   if (!is.numeric(alpha))
     error_message <- paste(error_message, "alpha is not numeric.", sep = "\n")
   if (!is.numeric(B))
@@ -118,8 +121,10 @@ check_input <- function(Y,
   if (!is.null(vio_space))
     if(any(is.na(unlist(vio_space))))
       error_message <- paste(error_message, "There are NA's in vio_space.", sep = "\n")
-  if (alpha > 1)
-    error_message <- paste(error_message, "alpha cannot be larger than 1.", sep = "\n")
+  if (alpha > 1 | alpha < 0)
+    error_message <- paste(error_message, "alpha cannot be negative or larger than 1.", sep = "\n")
+  if (B < 1)
+    error_message <- paste(error_message, "Number of bootstrap samples B must be positive.", sep = "\n")
 
   # checks input parameters of tsci_forest.
   if (tsci_method == "random forest")

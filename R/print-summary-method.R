@@ -24,6 +24,7 @@ print.summary.tsci <- function(x, ...) {
   rownames(coefficient_df) <- rownames(x$coefficient)
   colnames(coefficient_df) <- colnames(x$coefficient)
   print(coefficient_df)
+  cat(paste("Selection method:", x$sel_method, "\n"))
 
   # if extended_output is TRUE, prints also the treatment effect estimates for each violation space candidate.
   if (x$extended_output) {

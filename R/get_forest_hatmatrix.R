@@ -28,12 +28,29 @@ get_forest_hatmatrix <- function(df_treatment_A1, df_treatment_A2, params_grid, 
   leaves <- predict(forest_A2, data = df_treatment_A1, type = "terminalNodes")$predictions
   n_A1 <- NROW(leaves)
   forest_hatmatrix <- matrix(0, n_A1, n_A1)
-  for (j in seq_len(params_A2$num_trees)) {
-    # weight matrix of a single tree.
-    tree_hatmatrix <- get_tree_hatmatrix(leaves = leaves[, j],
-                                         self_predict = params_A2$self_predict)
-    # updating weight matrix of the random forest.
-    forest_hatmatrix <- forest_hatmatrix + tree_hatmatrix / params_A2$num_trees
+  if (params_A2$self_predict) {
+    for (j in seq_len(params_A2$num_trees)) {
+      leaves_tree <- leaves[, j]
+      unique_leaves = unique(leaves_tree)
+      for(leave in unique_leaves){
+        leaves_pos <- which(leave == leaves_tree)
+        forest_hatmatrix[leaves_pos, leaves_pos] <-
+          forest_hatmatrix[leaves_pos, leaves_pos] + 1 / length(leaves_pos) / params_A2$num_trees
+      }
+    }
+  }
+
+  if (!params_A2$self_predict){
+    for (j in seq_len(params_A2$num_trees)) {
+      leaves_tree <- leaves[, j]
+      unique_leaves = unique(leaves_tree)
+      for(leave in unique_leaves){
+        leaves_pos <- which(leave == leaves_tree)
+        forest_hatmatrix[leaves_pos, leaves_pos] <-
+          forest_hatmatrix[leaves_pos, leaves_pos] + 1 / (length(leaves_pos) - 1) / params_A2$num_trees
+      }
+      diag(forest_hatmatrix) <- 0
+    }
   }
   return(list(
     weight = forest_hatmatrix,

@@ -23,6 +23,7 @@ test_that("correct output for valid input", {
                            weight = weight,
                            intercept = FALSE,
                            sel_method = "comparison",
+                           sd_boot = FALSE,
                            iv_threshold = 10,
                            threshold_boot = FALSE,
                            alpha = 0.05,

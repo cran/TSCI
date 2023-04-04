@@ -13,6 +13,8 @@
 #' @param vio_space vio_space a matrix or a list.
 #' @param intercept logical, including the intercept or not in the outcome model, default by TRUE.
 #' @param sel_method The selection method used to estimate the treatment effect. Either "comparison" or "conservative".
+#' @param sd_boot logical. if \code{TRUE}, it determines the standard error using a bootstrap approach.
+#' If \code{FALSE}, it does not perform a bootstrap.
 #' @param split_prop split_prop numeric, proportion of observations used to fit the outcome model.
 #' @param iv_threshold minimal value of the threshold of IV strength test, default by 10.
 #' @param threshold_boot logical. if \code{TRUE}, it determines the threshold of the IV strength using a bootstrap approach.
@@ -35,6 +37,7 @@ tsci_fit <- function(df_treatment,
                      list_vio_space,
                      intercept,
                      sel_method,
+                     sd_boot,
                      iv_threshold,
                      threshold_boot,
                      split_prop,
@@ -87,6 +90,7 @@ tsci_fit <- function(df_treatment,
     weight = model_treatment$weight,
     intercept = intercept,
     sel_method = sel_method,
+    sd_boot = sd_boot,
     iv_threshold = iv_threshold,
     threshold_boot = threshold_boot,
     alpha = alpha,

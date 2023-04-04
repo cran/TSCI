@@ -47,7 +47,7 @@ summary.tsci <- function(object,
                object$CI_sel[1, 1],
                object$CI_sel[2, 1],
                object$pval_sel[1])
-  colnames(coef_df) <- c("Estimate", "Std_Error", paste(100 * object$alpha/2, "%"), paste(100*(1 - object$alpha/2), "%"), "Pr(>|t|)")
+  colnames(coef_df) <- c("Estimate", "Std_Error", paste0(100 * object$alpha/2, "%"), paste0(100*(1 - object$alpha/2), "%"), "Pr(>|t|)")
   row.names(coef_df) <- names(object$Coef_sel[1])
 
   TreatmentModel_df <- data.frame("Estimation_Method" = object$FirstStage_model)
@@ -64,8 +64,8 @@ summary.tsci <- function(object,
                  object$CI_all[1, ],
                  object$CI_all[2, ],
                  object$pval_all)
-    colnames(coef_all_df) <- c("Estimate", "Std_Error", paste(100 * object$alpha/2, "%"),
-                               paste(100*(1 - object$alpha/2), "%"), "Pr(>|t|)")
+    colnames(coef_all_df) <- c("Estimate", "Std_Error", paste0(100 * object$alpha/2, "%"),
+                               paste0(100*(1 - object$alpha/2), "%"), "Pr(>|t|)")
     row.names(coef_all_df) <- names(object$Coef_all)
 
     IVStrength_df <- data.frame("IV_Strength" = object$iv_str,
@@ -83,6 +83,7 @@ summary.tsci <- function(object,
                         n_splits = object$nsplits,
                         mult_split_method = object$mult_split_method,
                         alpha = object$alpha,
+                        sel_method = object$sel_method,
                         extended_output = extended_output)
     class(output_list) <- "summary.tsci"
     return(output_list)
@@ -98,6 +99,7 @@ summary.tsci <- function(object,
                       n_splits = object$nsplits,
                       mult_split_method = object$mult_split_method,
                       alpha = object$alpha,
+                      sel_method = object$sel_method,
                       extended_output = extended_output)
   class(output_list) <- "summary.tsci"
   return(output_list)
