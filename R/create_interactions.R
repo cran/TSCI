@@ -8,7 +8,7 @@
 #' (if only interactions between the instrumental variales itself should be part
 #' of the violation space candidates).
 #'
-#' @return A ordered list. The first element contains the observations of the
+#' @return A list. The first element contains the observations of the
 #' instrumental variable(s) \code{Z}. The second element contains all interactions between
 #' the instrumental variable(s) and the baseline covariate(s) \code{X}.
 #'

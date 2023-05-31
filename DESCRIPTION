@@ -1,7 +1,7 @@
 Package: TSCI
 Title: Tools for Causal Inference with Possibly Invalid Instrumental
         Variables
-Version: 2.0.0
+Version: 3.0.0
 Authors@R: 
     c(
     person(given="David",
@@ -32,7 +32,7 @@ Description: Two stage curvature identification with machine learning for causal
     because of potentially invalid instrumental variables. Based on Guo and 
     Buehlmann (2022) "Two Stage Curvature Identification with Machine Learning: 
     Causal Inference with Possibly Invalid Instrumental Variables"
-    <arXiv:2203.12808> and Carl, Emmenegger, Bühlmann and Guo (2023) 
+    <arXiv:2203.12808>. The vignette is available in Carl, Emmenegger, Bühlmann and Guo (2023) 
     "TSCI: two stage curvature identification for causal inference with 
     invalid instruments" <arXiv:2304.00513>.
 URL: https://github.com/dlcarl/TSCI
@@ -44,7 +44,7 @@ Suggests: fda, MASS, testthat (>= 3.0.0), withr
 Config/testthat/edition: 3
 Imports: xgboost, Rfast, stats, ranger, parallel, fastDummies
 NeedsCompilation: no
-Packaged: 2023-04-04 08:27:22 UTC; david
+Packaged: 2023-05-31 19:58:52 UTC; david
 Author: David Carl [aut, cre] (<https://orcid.org/0000-0003-0615-0133>),
   Corinne Emmenegger [aut] (<https://orcid.org/0000-0003-0353-8888>),
   Wei Yuan [aut],
@@ -52,4 +52,4 @@ Author: David Carl [aut, cre] (<https://orcid.org/0000-0003-0615-0133>),
   Zijian Guo [aut] (<https://orcid.org/0000-0002-2888-7016>)
 Maintainer: David Carl <david.carl@phd.unibocconi.it>
 Repository: CRAN
-Date/Publication: 2023-04-04 10:50:02 UTC
+Date/Publication: 2023-05-31 20:20:02 UTC

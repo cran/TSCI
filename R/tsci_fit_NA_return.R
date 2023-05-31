@@ -2,21 +2,21 @@
 tsci_fit_NA_return <- function(Q) {
   # this function returns an object consisting of NA-entries only but of the same dimension as
   # the return object of the function tsci_selection except for the element 'mse'.
-  Coef_all <- sd_all <- pval_all <- rep(NA, Q)
+  Coef_all <- sd_all <- pval_all <- rep(NA_real_, Q)
   names(Coef_all) <- names(sd_all) <- names(pval_all) <- paste("TSCI-q", seq(0, Q - 1), sep = "")
-  CI_all <- matrix(NA, nrow = 2, ncol = Q)
+  CI_all <- matrix(NA_real_, nrow = 2, ncol = Q)
   rownames(CI_all) <- c("lower", "upper")
   colnames(CI_all) <- names(Coef_all)
-  Coef_sel <- sd_sel <- pval_sel <- rep(NA, 1)
+  Coef_sel <- sd_sel <- pval_sel <- rep(NA_real_, 1)
   names(Coef_sel) <- names(sd_sel) <- names(pval_sel) <- c("TSCI-Estimate")
-  CI_sel <- matrix(NA, nrow = 2, ncol = 1)
+  CI_sel <- matrix(NA_real_, nrow = 2, ncol = 1)
   rownames(CI_sel) <- c("lower", "upper")
   colnames(CI_sel) <- names(Coef_sel)
-  iv_str <- iv_thol <- rep(NA, Q)
+  iv_str <- iv_thol <- rep(NA_real_, Q)
   names(iv_str) <- names(iv_thol) <- paste("q", seq(0, Q - 1), sep = "")
-  Qmax <- q_comp <- q_cons <- rep(NA, Q)
+  Qmax <- q_comp <- q_cons <- rep(NA_real_, Q)
   names(Qmax) <- names(q_comp) <- names(q_cons) <- paste("q", seq(0, Q - 1), sep = "")
-  invalidity <- rep(NA, 3)
+  invalidity <- rep(NA_real_, 3)
   names(invalidity) <- c("valid", "invalid", "non_testable")
   mse <- -1
   names(mse) <- "mse"

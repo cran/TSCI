@@ -1,5 +1,13 @@
-#' @exportS3Method
-print.summary.tsci <- function(x, ...) {
+#' Print Content of summary.tsci Object.
+#'
+#' @param x an object of class 'summary.tsci'.
+#' @param digits number of significant digits to display.
+#' @param ... arguments to be passed to or from other methods.
+#'
+#' @export
+print.summary.tsci <- function(x,
+                               digits = max(3, getOption("digits") - 3),
+                               ...) {
   # this functions prints the most relevant statistics of ''summary.tsci' objects.
 
   # prints multi-splitting statistics.
@@ -20,18 +28,20 @@ print.summary.tsci <- function(x, ...) {
 
   # prints treatment effect estimate.
   cat("\nTreatment effect estimate of selected violation space candidate(s):\n")
-  coefficient_df <- data.frame(lapply(x$coefficient, FUN = function(y) if (is.numeric(y)) {round(y, 5)}  else {y}))
+  coefficient_df <- data.frame(lapply(x$coefficient, FUN = function(y) if (is.numeric(y)) {signif(y, digits)}  else {y}))
   rownames(coefficient_df) <- rownames(x$coefficient)
   colnames(coefficient_df) <- colnames(x$coefficient)
+  coefficient_df$`Pr(>|t|)` <- format.pval(coefficient_df$`Pr(>|t|)`, digits = digits)
   print(coefficient_df)
   cat(paste("Selection method:", x$sel_method, "\n"))
 
   # if extended_output is TRUE, prints also the treatment effect estimates for each violation space candidate.
   if (x$extended_output) {
     cat("\nTreatment effect estimates of all violation space candidates:\n")
-    coefficients_all_df <- data.frame(lapply(x$coefficients_all, FUN = function(y) if (is.numeric(y)) {round(y, 5)}  else {y}))
+    coefficients_all_df <- data.frame(lapply(x$coefficients_all, FUN = function(y) if (is.numeric(y)) {signif(y, digits)}  else {y}))
     rownames(coefficients_all_df) <- rownames(x$coefficients_all)
     colnames(coefficients_all_df) <- colnames(x$coefficients_all)
+    coefficients_all_df$`Pr(>|t|)` <- format.pval(coefficients_all_df$`Pr(>|t|)`, digits = digits)
     print(coefficients_all_df)
   }
 
@@ -46,7 +56,7 @@ print.summary.tsci <- function(x, ...) {
   # if extended_output is TRUE; prints also IV strength statistics.
   if (x$extended_output) {
     cat("\nStatistics about the IV strength:\n")
-    print(round(x$iv_strength, 2))
+    print(signif(x$iv_strength, digits))
   }
   invisible(x)
 }

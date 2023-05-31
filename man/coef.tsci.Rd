@@ -2,16 +2,17 @@
 % Please edit documentation in R/coef-method.R
 \name{coef.tsci}
 \alias{coef.tsci}
-\title{Extract Model Coefficients of TSCI Fits}
+\title{Extract Model Coefficients of TSCI Fits.}
 \usage{
-\method{coef}{tsci}(object, all = FALSE, ...)
+\method{coef}{tsci}(object, parm = NULL, ...)
 }
 \arguments{
-\item{object}{a object of class 'tsci'.}
+\item{object}{an object of class 'tsci'.}
 
-\item{all}{logical. If \code{FALSE}, only the treatment effect estimate of the
-selected violation space candidate(s) is returned. If \code{TRUE}, additionally the treatment
-effect estimates of each violation space candidate are returned.}
+\item{parm}{a specification for which treatment effect estimates should be returned.
+Either a vector of numbers or a vector of names or 'all'.
+If missing, the treatment effect estimate by violation space selection is returned.
+If 'all', the treatment effect estimates for all violation space candidates are returned.}
 
 \item{...}{arguments to be passed to or from other methods.}
 }
@@ -19,5 +20,5 @@ effect estimates of each violation space candidate are returned.}
 Coefficients extracted form the model object \code{object}.
 }
 \description{
-Extract Model Coefficients of TSCI Fits
+Extract Model Coefficients of TSCI Fits.
 }

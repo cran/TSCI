@@ -7,7 +7,7 @@
 \method{confint}{tsci}(object, parm = NULL, level = 0.95, ...)
 }
 \arguments{
-\item{object}{a object of class 'tsci'.}
+\item{object}{an object of class 'tsci'.}
 
 \item{parm}{a specification of the parameters for which confidence intervals should be calculated.
 Either a vector of numbers or a vector of names or 'all'.

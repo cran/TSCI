@@ -22,7 +22,7 @@
 #'     \item{\code{diag_M}}{diagonal of matrix M_{RF}(V) corresponding to a violation space candidate.}
 #' @noRd
 #'
-#' @importFrom stats resid lm rnorm quantile
+#' @importFrom stats resid lm.fit rnorm quantile
 #'
 tsci_selection_stats <- function(D_rep, Cov_rep, weight, eps_hat, delta_hat, sd_boot, iv_threshold, threshold_boot, B) {
   # this function returns the standard error of the trace of the treatment effect estimate (14),
@@ -36,10 +36,10 @@ tsci_selection_stats <- function(D_rep, Cov_rep, weight, eps_hat, delta_hat, sd_
   # the trace of M_{RF}(V) matrix can be computed as a sum of squared residuals
   # obtained from regressing each column of the weight matrix on Cov.rep.
   SigmaSqD <- mean(delta_hat^2)
-  diag_M <- colSums(resid(lm(weight ~ Cov_rep - 1))^2)
+  diag_M <- colSums(resid(lm.fit(x = as.matrix(Cov_rep), y = weight))^2)
   trace_M <- sum(diag_M)
   # estimates iv strength (17).
-  D_resid <- resid(lm(D_rep ~ Cov_rep - 1))
+  D_resid <- resid(lm.fit(x = as.matrix(Cov_rep), y = D_rep))
   D_RSS <- sum(D_resid^2)
   iv_str <- D_RSS / SigmaSqD
   # bootstrap for the standard error and iv threshold if sd_boot is TRUE and threshold_boot is TRUE
@@ -50,10 +50,8 @@ tsci_selection_stats <- function(D_rep, Cov_rep, weight, eps_hat, delta_hat, sd_
     if (sd_boot) {
       eps_cent <- as.vector(eps_hat - mean(eps_hat))
       eps_boo_matrix <- u_matrix * eps_cent
-      #delta_resid <- resid(lm(weight %*% delta_boo_matrix ~ Cov_rep - 1))
-      eps_resid <- resid(lm(weight %*% eps_boo_matrix ~ Cov_rep - 1))
+      eps_resid <- resid(lm.fit(x = as.matrix(Cov_rep), y = weight %*% eps_boo_matrix))
       bias_term1 <- t(D_resid) %*% eps_resid
-      #bias_Err1 <- colSums(eps_resid * delta_resid) - colSums(eps_boo_matrix * delta_boo_matrix * diag_M)
       bias_Err1 <- - colSums(eps_boo_matrix * delta_boo_matrix * diag_M)
       N_vec <- (bias_term1 + bias_Err1) / D_RSS
       sd <- sd(N_vec)
@@ -64,7 +62,7 @@ tsci_selection_stats <- function(D_rep, Cov_rep, weight, eps_hat, delta_hat, sd_
     if (threshold_boot) {
       D_rep2 <- weight %*% D_rep
       delta_rep_matrix <- weight %*% delta_boo_matrix
-      delta_resid_matrix <- resid(lm(delta_rep_matrix ~ Cov_rep - 1))
+      delta_resid_matrix <- resid(lm.fit(x = as.matrix(Cov_rep), y = delta_rep_matrix))
       boot_vec <- apply(delta_resid_matrix, 2, FUN = function(delta_resid) sum(delta_resid^2) + 2 * sum(D_rep2 * delta_resid))
       iv_thol <- quantile(boot_vec, 0.975) /
         SigmaSqD + max(2 * trace_M, iv_threshold)

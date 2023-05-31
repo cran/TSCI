@@ -7,14 +7,14 @@
 \method{summary}{tsci}(object, extended_output = FALSE, ...)
 }
 \arguments{
-\item{object}{a object of class 'tsci'.}
+\item{object}{an object of class 'tsci'.}
 
 \item{extended_output}{logical. If \code{TRUE} are more detailed summary is returned.}
 
 \item{...}{arguments to be passed to or from other methods.}
 }
 \value{
-a object of class 'summary.tsci' containing the following elements:
+an object of class 'summary.tsci' containing the following elements:
 \describe{
 \item{\code{coefficient}}{a data frame with columns for the estimated treatment coefficient, its standard error, confidence interval and (two-sided) p-value.}
 \item{\code{invalidity}}{a vector containing the number of times the instrumental variable(s) were considered valid, invalid or too weak to perform the test.}

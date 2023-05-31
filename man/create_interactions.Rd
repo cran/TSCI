@@ -17,7 +17,7 @@ or a numeric matrix with dimension n by p or \code{NULL}
 of the violation space candidates).}
 }
 \value{
-A ordered list. The first element contains the observations of the
+A list. The first element contains the observations of the
 instrumental variable(s) \code{Z}. The second element contains all interactions between
 the instrumental variable(s) and the baseline covariate(s) \code{X}.
 }

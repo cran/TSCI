@@ -104,12 +104,12 @@ aggregate_output <- function(output_list, alpha, Q,  mult_split_method, raw_outp
     returnList$CI_sel[] <- matrix(unlist(lapply(stats_sel, FUN = function(x) x$CI)), nrow = 2)
   } else {
     # if no valid inference method was selected, remove measures of uncertainty. Should never happen.
-    returnList$sd_all[] <- rep(NA, times = NCOL(sd_all_matrix))
-    returnList$pval_all[] <- rep(NA, times = NCOL(sd_all_matrix))
-    returnList$CI_all[] <- matrix(NA, nrow = 2, ncol = NCOL(Coef_all_matrix))
-    returnList$sd_sel[] <- rep(NA, times = NCOL(sd_sel_matrix))
-    returnList$pval_sel[] <- rep(NA, times = NCOL(sd_sel_matrix))
-    returnList$CI_sel[] <- matrix(NA, nrow = 2, ncol = NCOL(Coef_sel_matrix))
+    returnList$sd_all[] <- rep(NA_real_, times = NCOL(sd_all_matrix))
+    returnList$pval_all[] <- rep(NA_real_, times = NCOL(sd_all_matrix))
+    returnList$CI_all[] <- matrix(NA_real_, nrow = 2, ncol = NCOL(Coef_all_matrix))
+    returnList$sd_sel[] <- rep(NA_real_, times = NCOL(sd_sel_matrix))
+    returnList$pval_sel[] <- rep(NA_real_, times = NCOL(sd_sel_matrix))
+    returnList$CI_sel[] <- matrix(NA_real_, nrow = 2, ncol = NCOL(Coef_sel_matrix))
   }
   if (raw_output) {
     returnList$coef_all_raw <- Coef_all_matrix

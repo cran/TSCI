@@ -61,7 +61,7 @@
 #' }
 #' @noRd
 #'
-#' @importFrom stats coef lm qnorm quantile resid rnorm var
+#' @importFrom stats coef lm.fit qnorm quantile resid rnorm var
 tsci_selection <- function(Y,
                            D,
                            W,
@@ -105,7 +105,7 @@ tsci_selection <- function(Y,
   output <- tsci_fit_NA_return(Q = Q)
 
   # initializes a vector for the treatment effect estimates for each violation space candidate.
-  Coef_all <- rep(NA, Q)
+  Coef_all <- rep(NA_real_, Q)
 
   # the noise of treatment model. Needed for the bias correction (12) and to estimate
   # the iv strength (17) and iv threshold (18).
@@ -119,15 +119,15 @@ tsci_selection <- function(Y,
   # the position of the columns of W in Cov_aug_A1.
   pos_W <- seq(NCOL(vio_space) + 1, NCOL(Cov_aug_A1))
   ### fixed violation space, compute necessary inputs of selection part.
-  D_resid <- diag_M_list <- rep(list(NA), Q)
+  D_resid <- diag_M_list <- rep(list(NA_real_), Q)
   for (index in seq_len(Q)) {
     # the first violation space candidate is always the empty space (i.e. assuming no violation).
     if (index == 1) pos_VW <- pos_W else pos_VW <- c(vio_ind[[index - 1]], pos_W)
     # the initial treatment effect estimate (11).
-    reg_ml <- lm(Y_rep ~ D_rep + Cov_rep[, pos_VW] - 1)
+    reg_ml <- lm.fit(x = cbind(D_rep, Cov_rep[, pos_VW]), y = Y_rep)
     betaHat <- coef(reg_ml)[1]
     Coef_all[index] <- betaHat
-    eps_hat[[index]] <- resid(lm(Y_A1 - D_A1 * betaHat ~ Cov_aug_A1[, pos_VW] - 1))
+    eps_hat[[index]] <- resid(lm.fit(x = as.matrix(Cov_aug_A1[, pos_VW]), y = Y_A1 - D_A1 * betaHat))
     # tsci_selection_stats returns the standard error of the trace of the
     # treatment effect estimate (14), D_resid used for the violation space selection (20, 23),
     # the estimated iv strength (17), the iv strength threshold (18) and the trace of M (11).
@@ -176,7 +176,7 @@ tsci_selection <- function(Y,
   # if IV test fails at q0 (empty space) or q1, we do not need to do selection.
   if (Qmax >= 1) {
     eps_Qmax <- eps_hat[[Qmax + 1]]
-    Coef_Qmax <- rep(NA, Q)
+    Coef_Qmax <- rep(NA_real_, Q)
     for (i in seq_len(Q)) {
       # corresponds to (19)
       Coef_Qmax[i] <- Coef_all[i] - sum(diag_M_list[[i]] * delta_hat * eps_Qmax) / D_RSS[i]

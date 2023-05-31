@@ -59,7 +59,7 @@ summary(output_RF)
 
 # TSCI with boosting
 ```
-output_BO <- tsci_boosting(Y = Y, D = D, Z 0 Z, X = X, vio_space = vio_space)
+output_BO <- tsci_boosting(Y = Y, D = D, Z = Z, X = X, vio_space = vio_space)
 summary(output_BO)
 ```
 
@@ -73,6 +73,6 @@ summary(output_PY)
 ```
 A <- cbind(1, Z, Z^2, Z^3, Z^4, X)
 weight <- A %*% chol2inv(chol(t(A) %*% A)) %*% t(A)
-output_UD <- tsci_secondstage(Y = Y, D = D, Z = Z, X = X, vio_space = vio_space, weight = weight)
+output_UD <- tsci_secondstage(Y = Y, D = D, Z = Z, W = X, vio_space = vio_space, weight = weight)
 summary(output_UD)
 ```

@@ -1,7 +1,18 @@
-#' @exportS3Method
-print.tsci <- function(x, ...) {
-  # the same output is printed as when calling summary.tsci.
-  stopifnot(inherits(x, "tsci"))
+#' Print Content of tsci Object.
+#'
+#' @param x an object of class 'tsci'.
+#' @param digits number of significant digits to display.
+#' @param ... arguments to be passed to or from other methods.
+#'
+#' @export
+print.tsci <- function(x,
+                       digits = max(3, getOption("digits") - 3),
+                       ...) {
+  # prints invalidity test.
+  cat("\nStatistics about the validity of the instrument(s):\n")
+  print(x$invalidity)
 
-  print.summary.tsci(summary.tsci(object = x, extended_output = FALSE,  ...), ...)
+  # prints treatment effect estimate.
+  cat("\nTreatment effect estimate of selected violation space candidate(s):\n")
+  print(signif(x$Coef_sel[1], digits))
 }

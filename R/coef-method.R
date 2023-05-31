@@ -1,17 +1,32 @@
-#' Extract Model Coefficients of TSCI Fits
+#' Extract Model Coefficients of TSCI Fits.
 #'
-#' @param object a object of class 'tsci'.
-#' @param all logical. If \code{FALSE}, only the treatment effect estimate of the
-#' selected violation space candidate(s) is returned. If \code{TRUE}, additionally the treatment
-#' effect estimates of each violation space candidate are returned.
+#' @param object an object of class 'tsci'.
+#' @param parm a specification for which treatment effect estimates should be returned.
+#' Either a vector of numbers or a vector of names or 'all'.
+#' If missing, the treatment effect estimate by violation space selection is returned.
+#' If 'all', the treatment effect estimates for all violation space candidates are returned.
 #' @param ... arguments to be passed to or from other methods.
 #'
 #' @return Coefficients extracted form the model object \code{object}.
 #' @export
 coef.tsci <- function(object,
-                      all = FALSE,
+                      parm = NULL,
                       ...) {
-  stopifnot(inherits(object, "tsci"))
-  if (all) return(c(object$Coef_sel, object$Coef_all))
-  return(object$Coef_sel)
+  coefs <- c(object$Coef_sel, object$Coef_all)
+  if (is.character(parm)) {
+    stopifnot(all(parm %in% names(coefs)) | parm == "all")
+    if (parm[1] != "all") {
+      ind <- which(names(coefs) %in% parm)
+    } else {
+      ind <- seq_len(length(coefs))
+    }
+  }
+  if (is.numeric(parm)) {
+    stopifnot(all(parm %in% seq_len(length(coefs))))
+    ind <- parm
+  }
+  if (is.null(parm)) {
+    ind <- which(names(coefs) == "TSCI-Estimate")
+  }
+  return(coefs[ind])
 }

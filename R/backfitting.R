@@ -13,7 +13,7 @@ backfitting <- function(df,
   p <- NCOL(X)
   mu <- mean(Y)
   g_X <- matrix(0, nrow = n, ncol = p)
-  order_opt <- rep(NA, p)
+  order_opt <- rep(NA_real_, p)
   for (iter in seq_len(max_iter)) {
     g_old <- g_X
     for (j in seq_len(p)) {

@@ -1,6 +1,6 @@
 #' Confidence Intervals of Treatment Effect Estimates for TSCI Fits.
 #'
-#' @param object a object of class 'tsci'.
+#' @param object an object of class 'tsci'.
 #' @param parm a specification of the parameters for which confidence intervals should be calculated.
 #' Either a vector of numbers or a vector of names or 'all'.
 #' If missing, the confidence interval of treatment effect estimate by violation space selection is returned.
@@ -13,7 +13,6 @@
 confint.tsci <- function(object, parm = NULL, level = 0.95, ...) {
   # this functions calculates the confidence intervals for the treatment effect estimates at
   # the desired level.
-  stopifnot(inherits(object, "tsci"))
   alpha <- 1 - level
   conf_intervals <- t(cbind(object$CI_sel, object$CI_all))
 
@@ -21,7 +20,7 @@ confint.tsci <- function(object, parm = NULL, level = 0.95, ...) {
   # for which the CIs should be returned
   if (is.character(parm)) {
     stopifnot(all(parm %in% rownames(conf_intervals)) | parm == "all")
-    if (parm != "all") {
+    if (parm[1] != "all") {
       ind <- which(rownames(conf_intervals) %in% parm)
     } else {
       ind <- seq_len(NROW(conf_intervals))

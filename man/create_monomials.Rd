@@ -18,7 +18,7 @@ or a numeric matrix with dimension n by s.}
 Default is \code{monomials_full}.}
 }
 \value{
-A ordered list. Each element is a matrix consisting of the monomials to be added to
+A list. Each element is a matrix consisting of the monomials to be added to
 the next violation space candidate.
 }
 \description{

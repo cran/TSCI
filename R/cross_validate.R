@@ -15,7 +15,7 @@ cross_validate <- function(Y, X, nfolds) {
       sub_test_index <- seq((k - 1) * sub_obs + 1, k * sub_obs)
     }
     sub_test_index <- Resample[sub_test_index]
-    fit <- lm(Y[-sub_test_index] ~ X[-sub_test_index, ] - 1)
+    fit <- lm.fit(x = as.matrix(X[-sub_test_index, ]), y = Y[-sub_test_index])
     mse_tmp[k] <- mean((as.matrix(X[sub_test_index, ]) %*% coef(fit) - Y[sub_test_index])^2)
   }
 
