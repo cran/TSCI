@@ -136,7 +136,7 @@
 #' ### a small example without baseline covariates
 #' if (require("MASS")) {
 #'   # sample size
-#'   n <- 200
+#'   n <- 100
 #'   # the IV strength
 #'   a <- 1
 #'   # the violation strength
@@ -166,57 +166,9 @@
 #'   # create violation space candidates
 #'   vio_space <- create_monomials(Z, 2, "monomials_main")
 #'   # perform two stage curvature identification
-#'   output_UD <- tsci_secondstage(Y, D, Z, vio_space = vio_space, weight = weight)
+#'   output_UD <- tsci_secondstage(Y, D, Z, vio_space = vio_space, weight = weight,
+#'                                 B = 100)
 #'   summary(output_UD)
-#' }
-#'
-#' ### a larger example with baseline covariates
-#' \donttest{
-#'  if (require("MASS")) {
-#'    # dimension
-#'    p <- 10
-#'    # sample size
-#'    n <- 1000
-#'    # interaction value
-#'    inter_val <- 1
-#'    # the IV strength
-#'    a <- 1
-#'    # violation strength
-#'    tau <- 1
-#'    f <- function(x) {a * (1 * sin(2 * pi * x) + 1.5 * cos(2 * pi * x))}
-#'    rho <- 0.5
-#'    Cov <- stats::toeplitz(rho^c(0 : p))
-#'    mu <- rep(0, p + 1)
-#'    # true effect
-#'    beta <- 1
-#'    alpha <- as.matrix(rep(-0.3, p))
-#'   gamma <- as.matrix(rep(0.2, p))
-#'    inter <- as.matrix(c(rep(inter_val, 5),rep(0, p - 5)))
-#'
-#'    # generate the data
-#'    mu_error <- rep(0,2)
-#'    Cov_error <- matrix(c(1, 0.5, 0.5,1), 2, 2)
-#'    Error <- MASS::mvrnorm(n, mu_error, Cov_error)
-#'    W_original <- MASS::mvrnorm(n, mu, Cov)
-#'    W <- pnorm(W_original)
-#'    # instrumental variable
-#'    Z <- W[, 1]
-#'    # baseline covariates
-#'    X <- W[, -1]
-#'    # generate the treatment variable D
-#'    D <- f(Z) + X %*% alpha + Z * X %*% inter + Error[, 1]
-#'    # generate the outcome variable Y
-#'    Y <- D * beta + tau * Z + X %*% gamma + Error[, 2]
-#'
-#'    # get hat matrix of treatment model
-#'    A <- cbind(1, Z, Z^2, Z^3, Z^4, Z*X, X)
-#'    weight <- A %*% chol2inv(chol(t(A) %*% A)) %*% t(A)
-#'
-#'    # Two Stage User Defined
-#'    vio_space <- create_monomials(Z, 4, "monomials_main")
-#'    output_UD <- tsci_secondstage(Y, D, Z, X, vio_space = vio_space, weight = weight)
-#'    summary(output_UD)
-#'  }
 #' }
 #' @importFrom stats coef lm qnorm quantile resid rnorm
 tsci_secondstage <- function(Y,

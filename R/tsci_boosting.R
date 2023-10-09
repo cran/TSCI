@@ -169,7 +169,8 @@
 #' computing of the package \code{TSCI} is reproducible.
 #' This ensures that each processor receives a different substream of the
 #' pseudo random number generator stream.
-#' Thus, the results reproducible if the arguments remain unchanged.
+#' Thus, the results are reproducible if the arguments (including \code{ncores})
+#' remain unchanged.
 #' There is an optional argument \code{cl} to specify a custom cluster
 #' if \code{parallel = "snow"}. \cr \cr
 #' See also Carl et al. (2023) for more details.
@@ -202,7 +203,7 @@
 #' ### a small example without baseline covariates
 #' if (require("MASS")) {
 #'   # sample size
-#'   n <- 150
+#'   n <- 100
 #'   # the IV strength
 #'   a <- 1
 #'   # the violation strength
@@ -230,62 +231,8 @@
 #'   vio_space <- create_monomials(Z, 2, "monomials_main")
 #'   # perform two stage curvature identification
 #'   output_BO <- tsci_boosting(Y, D, Z, vio_space = vio_space, nsplits = 1,
-#'                              max_depth = 2, nrounds = 20)
+#'                              max_depth = 2, nrounds = 10, B = 100)
 #'   summary(output_BO)
-#' }
-#'
-#' \donttest{
-#' ### a larger example with baseline covariates
-#' if (require("MASS") & require("fda")) {
-#'   # dimension
-#'   p <- 10
-#'   # sample size
-#'   n <- 1000
-#'   # interaction value
-#'   inter_val <- 1
-#'   # the IV strength
-#'   a <- 1
-#'   # violation strength
-#'   tau <- 1
-#'   f <- function(x) {a * (1 * sin(2 * pi * x) + 1.5 * cos(2 * pi * x))}
-#'   rho <- 0.5
-#'   Cov <- stats::toeplitz(rho^c(0 : p))
-#'   mu <- rep(0, p + 1)
-#'   # true effect
-#'   beta <- 1
-#'   alpha <- as.matrix(rep(-0.3, p))
-#'   gamma <- as.matrix(rep(0.2, p))
-#'   inter <- as.matrix(c(rep(inter_val, 5),rep(0, p - 5)))
-#'
-#'   # generate the data
-#'   mu_error <- rep(0,2)
-#'   Cov_error <- matrix(c(1, 0.5, 0.5,1), 2, 2)
-#'   Error <- MASS::mvrnorm(n, mu_error, Cov_error)
-#'   W_original <- MASS::mvrnorm(n, mu, Cov)
-#'   W <- pnorm(W_original)
-#'   # instrumental variable
-#'   Z <- W[, 1]
-#'   # baseline covariates
-#'   X <- W[, -1]
-#'   # generate the treatment variable D
-#'   D <- f(Z) + X %*% alpha + Z * X %*% inter + Error[, 1]
-#'   # generate the outcome variable Y
-#'   Y <- D * beta + tau * Z + X %*% gamma + Error[, 2]
-#'
-#'   # Two Stage L2 Boosting
-#'   # create violation space candidates
-#'   vio_space <- create_monomials(Z, 4, "monomials_main")
-#'   # specify suitable basis W for the baseline covariates (here we choose basis splines)
-#'   W <- do.call(cbind,
-#'                lapply(seq_len(p), FUN = function(i) {
-#'                   knots <- quantile(X[, i], seq(0, 1, length = 10))
-#'                   fda::eval.basis(X[, i], fda::create.bspline.basis(rangeval = range(knots),
-#'                                                           breaks = knots, norder = 4))
-#'                 }))
-#'   # perform two stage curvature identification
-#'   output_BO <- tsci_boosting(Y, D, Z, X, vio_space = vio_space)
-#'   summary(output_BO)
-#' }
 #' }
 tsci_boosting <- function(Y,
                           D,
@@ -388,7 +335,8 @@ tsci_boosting <- function(Y,
     colsample_bytree = colsample_bytree,
     early_stopping = early_stopping,
     self_predict = self_predict,
-    lambda = 0
+    lambda = 0,
+    nthread = 1
   )
 
   # creates the dataframe used to fit the treatment model.

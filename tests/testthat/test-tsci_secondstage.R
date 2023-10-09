@@ -14,7 +14,8 @@ test_that("snapshot tsci_secondstage", {
                                                      Z = Z,
                                                      W = X,
                                                      vio_space = vio_space,
-                                                     weight = weight),
+                                                     weight = weight,
+                                                     B = 10),
                              .rng_kind = "L'Ecuyer-CMRG")
   expect_snapshot(output)
 })

@@ -12,7 +12,9 @@ test_that("snapshot tsci_boosting", {
                                                   Z = Z,
                                                   X = X,
                                                   vio_space = vio_space,
-                                                  nsplits = 2),
+                                                  nsplits = 2,
+                                                  nrounds = 2,
+                                                  B = 10),
                              .rng_kind = "L'Ecuyer-CMRG")
   expect_snapshot(output)
 

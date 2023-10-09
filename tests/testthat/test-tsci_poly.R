@@ -9,7 +9,9 @@ test_that("snapshot tsci_poly", {
                    code = tsci_poly(Y = Y,
                                     D = D,
                                     Z = Z,
-                                    X = X),
+                                    X = X,
+                                    exact_order = 3,
+                                    B = 10),
                    .rng_kind = "L'Ecuyer-CMRG")
   expect_snapshot(output)
 

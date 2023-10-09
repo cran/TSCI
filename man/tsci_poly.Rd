@@ -187,7 +187,7 @@ See also Carl et al. (2023) for more details.
 ### a small example without baseline covariates
 if (require("MASS")) {
   # sample size
-  n <- 150
+  n <- 100
   # the IV strength
   a <- 1
   # the violation strength
@@ -211,52 +211,8 @@ if (require("MASS")) {
   Y <- beta * D + g(Z) + Error[, 2]
 
   # Two Stage Polynomials
-  output_PO <- tsci_poly(Y, D, Z)
+  output_PO <- tsci_poly(Y, D, Z, max_order = 3, max_iter = 20, B = 100)
   summary(output_PO)
-}
-
-\donttest{
-### a larger example with baseline covariates
-if (require("MASS")) {
-  # dimension
-  p <- 10
-  # sample size
-  n <- 1000
-  # interaction value
-  inter_val <- 1
-  # the IV strength
-  a <- 1
-  # violation strength
-  tau <- 1
-  f <- function(x) {a * (1 * sin(2 * pi * x) + 1.5 * cos(2 * pi * x))}
-  rho <- 0.5
-  Cov <- stats::toeplitz(rho^c(0 : p))
-  mu <- rep(0, p + 1)
-  # true effect
-  beta <- 1
-  alpha <- as.matrix(rep(-0.3, p))
-  gamma <- as.matrix(rep(0.2, p))
-  inter <- as.matrix(c(rep(inter_val, 5),rep(0, p - 5)))
-
-  # generate the data
-  mu_error <- rep(0,2)
-  Cov_error <- matrix(c(1, 0.5, 0.5,1), 2, 2)
-  Error <- MASS::mvrnorm(n, mu_error, Cov_error)
-  W_original <- MASS::mvrnorm(n, mu, Cov)
-  W <- pnorm(W_original)
-  # instrumental variable
-  Z <- W[, 1]
-  # baseline covariates
-  X <- W[, -1]
-  # generate the treatment variable D
-  D <- f(Z) + X \%*\% alpha + Z * X \%*\% inter + Error[, 1]
-  # generate the outcome variable Y
-  Y <- D * beta + tau * Z + X \%*\% gamma + Error[, 2]
-
-  # Two Stage Polynomials
-  output_PO <- tsci_poly(Y, D, Z, X)
-  summary(output_PO)
-}
 }
 }
 \references{

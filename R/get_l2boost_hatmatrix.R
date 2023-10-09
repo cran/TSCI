@@ -11,7 +11,9 @@ get_l2boost_hatmatrix <- function(df_treatment_A1,
   n_A1 <- NROW(df_treatment_A1)
   n_A2 <- NROW(df_treatment_A2)
 
-  xgbD_A2 <- xgb.DMatrix(as.matrix(df_treatment_A2[, -1]), label = df_treatment_A2[, 1])
+  xgbD_A2 <- xgb.DMatrix(as.matrix(df_treatment_A2[, -1]),
+                         label = df_treatment_A2[, 1],
+                         nthread = params_grid$nthread[1])
 
   MSE_CV_A2 <- Inf
   params_A2 <- NULL
@@ -24,7 +26,8 @@ get_l2boost_hatmatrix <- function(df_treatment_A1,
         max_depth = params_grid$max_depth[i],
         subsample = params_grid$subsample[i],
         colsample_bytree = params_grid$colsample_bytree[i],
-        lambda = 0
+        lambda = params_grid$lambda[i],
+        nthread = params_grid$nthread[i]
       ),
       metrics = "rmse",
       nrounds = params_grid$nrounds[i],
@@ -48,8 +51,8 @@ get_l2boost_hatmatrix <- function(df_treatment_A1,
       MSE_CV_A2 <- mse_cv[m]
     }
   }
-
-  xgbD_A1 <- xgb.DMatrix(as.matrix(df_treatment_A1[, -1]))
+  xgbD_A1 <- xgb.DMatrix(as.matrix(df_treatment_A1[, -1]),
+                         nthread = params_A2$nthread)
   l2boost_A2 <- xgb.train(
     nrounds = params_A2$nrounds,
     params = list(
@@ -57,10 +60,14 @@ get_l2boost_hatmatrix <- function(df_treatment_A1,
       max_depth = params_A2$max_depth,
       subsample = params_A2$subsample,
       colsample_bytree = params_A2$colsample_bytree,
-      lambda = params_A2$lambda
+      lambda = params_A2$lambda,
+      nthread = params_A2$nthread
     ), data = xgbD_A2)
+
   nodes_A1 <- predict(l2boost_A2, newdata = xgbD_A1, predleaf = TRUE)
 
+  if (n_A1 > 100) do_fast_matmult <- TRUE
+  else do_fast_matmult <- FALSE
 
   l2boost_hatmatrix <- matrix(0, n_A1, n_A1)
   for (iter in seq_len(params_A2$nrounds)) {
@@ -69,8 +76,14 @@ get_l2boost_hatmatrix <- function(df_treatment_A1,
     tree_hatmatrix <- get_tree_hatmatrix(leaves_iter_A1,
                                          self_predict = params_A2$self_predict)
     # updates the hat matrix of the boosting fit. See Algorithm 3 in Guo and Bühlmann (2022).
-    l2boost_hatmatrix <- l2boost_hatmatrix + params_A2$eta *
-      mat.mult(tree_hatmatrix, diag(n_A1) - l2boost_hatmatrix)
+    if (do_fast_matmult) {
+      l2boost_hatmatrix <- l2boost_hatmatrix + params_A2$eta *
+        mat.mult(tree_hatmatrix, diag(n_A1) - l2boost_hatmatrix)
+    } else {
+      l2boost_hatmatrix <- l2boost_hatmatrix + params_A2$eta *
+        tree_hatmatrix %*% (diag(n_A1) - l2boost_hatmatrix)
+    }
+
   }
   # sets the diagonal of the hat matrix to zero and rescales the weights.
   if (!params_A2$self_predict) {
